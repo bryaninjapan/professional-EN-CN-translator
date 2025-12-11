@@ -5,9 +5,12 @@ import ReactMarkdown from 'react-markdown';
 import { Loader2, ArrowRightLeft, Copy, Check, Settings, Save, Download, PlayCircle } from 'lucide-react';
 
 // API 基础 URL 配置（用于 GitHub Pages 静态部署时指向外部 API）
-// 如果部署在 GitHub Pages，需要将 API 部署在 Vercel 或其他平台，并在此设置 API URL
-// 例如: const API_BASE_URL = 'https://your-api.vercel.app';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+// GitHub Pages 部署时会自动使用 Vercel API
+// 本地开发时使用相对路径（空字符串）
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
+  (typeof window !== 'undefined' && window.location.hostname.includes('github.io') 
+    ? 'https://professional-en-cn-translator.vercel.app' 
+    : '');
 
 // 类型定义
 type TranslationSections = {
