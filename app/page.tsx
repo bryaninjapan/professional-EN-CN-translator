@@ -116,8 +116,9 @@ export default function Home() {
       }
     } catch (e) {
       // #region agent log
-      console.error('[DEBUG testKey-error]', {errorName:e.name,errorMessage:e.message,errorType:e.constructor.name,timestamp:Date.now()});
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-error',message:'fetch error caught',data:{errorName:e.name,errorMessage:e.message,errorStack:e.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H5'})}).catch(()=>{});
+      const err = e as any;
+      console.error('[DEBUG testKey-error]', {errorName:err.name,errorMessage:err.message,errorType:err.constructor?.name,timestamp:Date.now()});
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-error',message:'fetch error caught',data:{errorName:err.name,errorMessage:err.message,errorStack:err.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H5'})}).catch(()=>{});
       // #endregion
       alert('❌ 网络请求失败');
     } finally {
@@ -179,8 +180,9 @@ export default function Home() {
       }
     } catch (error) {
       // #region agent log
-      console.error('[DEBUG translate-error]', {errorName:error.name,errorMessage:error.message,errorType:error.constructor.name,timestamp:Date.now()});
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-error',message:'translate fetch error',data:{errorName:error.name,errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H4,H5'})}).catch(()=>{});
+      const err = error as any;
+      console.error('[DEBUG translate-error]', {errorName:err.name,errorMessage:err.message,errorType:err.constructor?.name,timestamp:Date.now()});
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-error',message:'translate fetch error',data:{errorName:err.name,errorMessage:err.message,errorStack:err.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H4,H5'})}).catch(()=>{});
       // #endregion
       console.error("请求错误:", error);
       alert("网络请求失败，请重试");
