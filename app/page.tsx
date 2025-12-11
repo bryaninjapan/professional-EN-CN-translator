@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Loader2, ArrowRightLeft, Copy, Check, Settings, Save, Download, PlayCircle } from 'lucide-react';
 
+// API 基础 URL 配置（用于 GitHub Pages 静态部署时指向外部 API）
+// 如果部署在 GitHub Pages，需要将 API 部署在 Vercel 或其他平台，并在此设置 API URL
+// 例如: const API_BASE_URL = 'https://your-api.vercel.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+
 // 类型定义
 type TranslationSections = {
   translation: string;
@@ -85,7 +90,7 @@ export default function Home() {
     if (!apiKey.trim()) return;
     setIsTestingKey(true);
     try {
-      const res = await fetch('/api/test-key', {
+      const res = await fetch(`${API_BASE_URL}/api/test-key`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: apiKey.trim() }),
@@ -119,7 +124,7 @@ export default function Home() {
     formData.append('text', inputText);
 
     try {
-      const res = await fetch('/api/translate', {
+      const res = await fetch(`${API_BASE_URL}/api/translate`, {
         method: 'POST',
         headers: {
           'x-gemini-api-key': apiKey // 通过 Header 传递 Key
