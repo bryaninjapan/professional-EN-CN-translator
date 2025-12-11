@@ -10,9 +10,9 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // 如果部署在子路径，需要设置 basePath
-  // basePath: '/professional-EN-CN-translator',
-  // assetPrefix: '/professional-EN-CN-translator',
+  // GitHub Pages 子路径配置（只在 GitHub Pages 构建时启用）
+  basePath: process.env.NEXT_PUBLIC_DEPLOY_TARGET === 'github-pages' ? '/professional-EN-CN-translator' : '',
+  assetPrefix: process.env.NEXT_PUBLIC_DEPLOY_TARGET === 'github-pages' ? '/professional-EN-CN-translator' : '',
 };
 
 export default nextConfig;
