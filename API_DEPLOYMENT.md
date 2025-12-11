@@ -1,43 +1,54 @@
-# API 部署说明
+# 双部署架构指南 (GitHub Pages + Vercel)
 
-由于 GitHub Pages 只支持静态文件，API Routes 无法在 GitHub Pages 上运行。您需要将 API 单独部署到支持 Node.js 运行时的平台（如 Vercel）。
+本项目采用双部署架构：
+- **前端 (GitHub Pages)**: 托管静态页面，负责 UI 和用户交互。
+- **API 服务 (Vercel)**: 托管 API Routes，负责调用 Gemini API。
 
-## 方案 1：部署 API 到 Vercel（推荐）
+## 1. 为什么需要双部署？
 
-### 步骤
+- **GitHub Pages** 只支持静态文件，无法运行 API Routes (Node.js 代码)。
+- **Gemini API** 存在 CORS 限制，无法直接从浏览器调用，必须通过服务器代理。
+- **解决方案**：前端部署在 GitHub Pages，API 部署在 Vercel，前端通过 API 调用 Vercel 上的服务。
 
-1. **创建新的 Vercel 项目**
-   - 访问 [Vercel](https://vercel.com)
-   - 导入这个 GitHub 仓库
-   - 在项目设置中，配置 **Root Directory** 为 `app/api`（或创建单独的 API 仓库）
+## 2. 部署步骤
 
-2. **环境变量配置**
-   - 在 Vercel 项目设置中添加环境变量：
-     - `GEMINI_API_KEY`（可选，如果不设置，需要用户在界面输入）
+### 步骤 A: 部署 API 到 Vercel
 
-3. **获取 API 地址**
-   - 部署完成后，您会得到一个 URL，例如：`https://your-project.vercel.app`
+1.  将本项目导入 Vercel。
+2.  在 Vercel 项目设置中：
+    *   保留默认的 Build Command (`next build`)。
+    *   **不要**设置 `NEXT_PUBLIC_DEPLOY_TARGET` 环境变量 (这样就不会触发静态导出，API 路由会被保留)。
+3.  部署完成后，获取分配的域名 (例如 `https://your-project.vercel.app`)。
+4.  (可选) 在 Vercel 中设置环境变量 `GEMINI_API_KEY` 作为默认 Key (如果不设置，用户必须在前端手动输入)。
 
-4. **配置前端**
-   - 在 GitHub 仓库的 Settings → Secrets and variables → Actions 中添加：
-     - `NEXT_PUBLIC_API_BASE_URL` = `https://your-project.vercel.app`
-   - 或者在 `app/page.tsx` 中直接修改 `API_BASE_URL` 常量
+### 步骤 B: 部署前端到 GitHub Pages
 
-## 方案 2：恢复 API Routes 文件
+1.  在 GitHub 仓库设置中：
+    *   进入 **Settings** -> **Secrets and variables** -> **Actions**。
+    *   点击 **New repository secret**。
+    *   Name: `NEXT_PUBLIC_API_BASE_URL`
+    *   Value: `https://your-project.vercel.app` (填入步骤 A 中获取的 Vercel 域名)。
+2.  推送代码到 `main` 分支。
+3.  GitHub Actions 会自动触发：
+    *   它会识别环境变量 `NEXT_PUBLIC_DEPLOY_TARGET=github-pages`。
+    *   它会在构建前移除 API 目录 (避免静态导出错误)。
+    *   它会将 `NEXT_PUBLIC_API_BASE_URL` 注入到前端代码中。
+    *   最后部署到 GitHub Pages。
 
-如果您想单独部署 API，可以从之前的提交中恢复这些文件：
+## 3. 本地开发
+
+本地开发时，前端和 API 都在同一个服务中运行：
 
 ```bash
-git show d24cadb:app/api/translate/route.ts > app/api/translate/route.ts
-git show d24cadb:app/api/test-key/route.ts > app/api/test-key/route.ts
+npm run dev
 ```
 
-然后创建单独的 API 项目部署到 Vercel。
+访问 `http://localhost:3000` 即可，无需配置 `API_BASE_URL` (默认为相对路径)。
 
-## 方案 3：客户端直接调用 Gemini API（不推荐）
+## 4. 常见问题
 
-不推荐此方案，因为会暴露 API Key。但如果确实需要，可以修改前端代码直接调用 Gemini API（使用 `@google/generative-ai` 库）。
+**Q: 为什么测试 Key 时提示 404？**
+A: 请检查 GitHub Pages 部署的前端是否正确配置了 `API_BASE_URL`。打开浏览器控制台 (F12) -> Network，查看请求的 URL 是否指向了 Vercel 的域名，而不是 GitHub Pages 的域名。
 
----
-
-**注意**：当前代码已配置为支持外部 API URL，只需设置 `API_BASE_URL` 环境变量或在代码中修改即可。
+**Q: Vercel 部署失败？**
+A: 确保 Vercel 上没有设置 `NEXT_PUBLIC_DEPLOY_TARGET=github-pages`。Vercel 应该执行标准的 Next.js 构建。
