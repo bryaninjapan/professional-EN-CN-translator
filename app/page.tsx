@@ -207,7 +207,7 @@ export default function Home() {
       <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
         
         {/* 左侧：输入区域 */}
-        <div className="flex-1 flex flex-col border-r border-gray-200 bg-white h-1/2 md:h-full min-w-[350px]">
+        <div className="w-full md:w-2/5 flex flex-col border-r border-gray-200 bg-white md:h-full">
           <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
             <span className="text-sm font-semibold text-gray-600 flex items-center gap-2">
               📄 原文 (English)
@@ -242,7 +242,7 @@ export default function Home() {
         </div>
 
         {/* 右侧：结果区域 (三段式) */}
-        <div className="flex-[1.5] flex flex-col bg-gray-50 h-1/2 md:h-full overflow-hidden relative">
+        <div className="w-full md:w-3/5 flex flex-col bg-gray-50 md:h-full overflow-hidden relative">
           
           {/* 工具栏 */}
           <div className="p-3 border-b border-gray-200 bg-white flex justify-between items-center shadow-sm z-10">
