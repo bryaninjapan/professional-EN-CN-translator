@@ -3,6 +3,18 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const runtime = 'nodejs';
 
+// CORS 头部配置
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, x-gemini-api-key',
+};
+
+// 处理 preflight 请求
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 // Prompt: 明确要求不输出标题行，只输出内容，以便前端自定义标题
 const SYSTEM_PROMPT = `
 你是一位精通英语和中文的专业翻译专家及语言学家。你的任务是处理用户的英文输入。
@@ -43,11 +55,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ 
         error: "未提供 API Key",
         details: "请在设置中输入您的 Gemini API Key"
-      }, { status: 401 });
+      }, { status: 401, headers: corsHeaders });
     }
 
     if (!text) {
-      return NextResponse.json({ error: "请输入需要翻译的文本" }, { status: 400 });
+      return NextResponse.json({ error: "请输入需要翻译的文本" }, { status: 400, headers: corsHeaders });
     }
 
     // 获取模型实例
@@ -67,7 +79,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       result: reply
-    });
+    }, { headers: corsHeaders });
 
   } catch (error) {
     console.error("API Error:", error);
@@ -90,6 +102,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       error: errorMessage,
       details: errorDetails
-    }, { status: 500 });
+    }, { status: 500, headers: corsHeaders });
   }
 }
