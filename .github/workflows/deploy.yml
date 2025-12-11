@@ -40,7 +40,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_DEPLOY_TARGET: github-pages
-          NEXT_PUBLIC_API_BASE_URL: https://professionalencntranslator.vercel.app
+          NEXT_PUBLIC_API_BASE_URL: https://professional-en-cn-translator.vercel.app
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
