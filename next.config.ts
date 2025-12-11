@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   // GitHub Pages 子路径配置（只在 GitHub Pages 构建时启用）
   basePath: process.env.NEXT_PUBLIC_DEPLOY_TARGET === 'github-pages' ? '/professional-EN-CN-translator' : '',
   assetPrefix: process.env.NEXT_PUBLIC_DEPLOY_TARGET === 'github-pages' ? '/professional-EN-CN-translator' : '',
+  
+  // 确保环境变量在静态导出时正确注入
+  env: {
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || '',
+  },
 };
 
 export default nextConfig;
