@@ -89,12 +89,25 @@ export default function Home() {
   const testKey = async () => {
     if (!apiKey.trim()) return;
     setIsTestingKey(true);
+    // #region agent log
+    console.log('[DEBUG testKey-entry]', {API_BASE_URL,apiKeyLength:apiKey.length,timestamp:Date.now()});
+    fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-entry',message:'testKey started',data:{API_BASE_URL,apiKeyLength:apiKey.length},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     try {
-      const res = await fetch(`${API_BASE_URL}/api/test-key`, {
+      const fullUrl = `${API_BASE_URL}/api/test-key`;
+      // #region agent log
+      console.log('[DEBUG testKey-url]', {fullUrl,baseUrl:API_BASE_URL,timestamp:Date.now()});
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-url',message:'constructed URL',data:{fullUrl,baseUrl:API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      const res = await fetch(fullUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: apiKey.trim() }),
       });
+      // #region agent log
+      console.log('[DEBUG testKey-response]', {status:res.status,ok:res.ok,statusText:res.statusText,timestamp:Date.now()});
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-response',message:'fetch response received',data:{status:res.status,ok:res.ok,statusText:res.statusText,headers:Object.fromEntries(res.headers.entries())},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H3'})}).catch(()=>{});
+      // #endregion
       if (res.ok) {
         alert('✅ API Key 测试通过！');
       } else {
@@ -102,6 +115,10 @@ export default function Home() {
         alert(`❌ 测试失败: ${data.error}`);
       }
     } catch (e) {
+      // #region agent log
+      console.error('[DEBUG testKey-error]', {errorName:e.name,errorMessage:e.message,errorType:e.constructor.name,timestamp:Date.now()});
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-error',message:'fetch error caught',data:{errorName:e.name,errorMessage:e.message,errorStack:e.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H5'})}).catch(()=>{});
+      // #endregion
       alert('❌ 网络请求失败');
     } finally {
       setIsTestingKey(false);
@@ -122,17 +139,32 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append('text', inputText);
+    
+    // #region agent log
+    console.log('[DEBUG translate-entry]', {API_BASE_URL,textLength:inputText.length,apiKeyLength:apiKey.length,timestamp:Date.now()});
+    fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-entry',message:'handleTranslate started',data:{API_BASE_URL,textLength:inputText.length,apiKeyLength:apiKey.length},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H1,H4'})}).catch(()=>{});
+    // #endregion
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/translate`, {
+      const fullUrl = `${API_BASE_URL}/api/translate`;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-url',message:'constructed translate URL',data:{fullUrl,baseUrl:API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      const res = await fetch(fullUrl, {
         method: 'POST',
         headers: {
           'x-gemini-api-key': apiKey // 通过 Header 传递 Key
         },
         body: formData,
       });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-response',message:'translate fetch response',data:{status:res.status,ok:res.ok,statusText:res.statusText,contentType:res.headers.get('content-type')},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H3,H4'})}).catch(()=>{});
+      // #endregion
 
       const data = await res.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-data',message:'parsed response data',data:{hasResult:!!data.result,hasError:!!data.error,resultLength:data.result?.length,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
 
       if (data.result) {
         // 解析结果
@@ -146,6 +178,10 @@ export default function Home() {
         alert(`翻译失败: ${data.error || '未知错误'} \n ${data.details || ''}`);
       }
     } catch (error) {
+      // #region agent log
+      console.error('[DEBUG translate-error]', {errorName:error.name,errorMessage:error.message,errorType:error.constructor.name,timestamp:Date.now()});
+      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-error',message:'translate fetch error',data:{errorName:error.name,errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H4,H5'})}).catch(()=>{});
+      // #endregion
       console.error("请求错误:", error);
       alert("网络请求失败，请重试");
     } finally {
