@@ -15,6 +15,7 @@ const LANG_CONFIG: Record<string, string> = {
   zh: '中文',
   ja: '日语',
   ko: '韩语',
+  vi: '越南语',
 };
 
 // 动态生成 System Prompt

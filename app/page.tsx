@@ -4,9 +4,17 @@ import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Loader2, ArrowRightLeft, Copy, Check, Download, Languages, Key, Users, Gift, ShoppingCart } from 'lucide-react';
 
-// 支持的语言配置
+// 支持的语言配置（UI界面语言）
 const SUPPORTED_LANGUAGES = [
   { code: 'zh', name: '简体中文' },
+  { code: 'ja', name: '日本語' },
+  { code: 'ko', name: '한국어' },
+  { code: 'vi', name: 'Tiếng Việt' },
+];
+
+// 翻译目标语言配置
+const TRANSLATION_TARGET_LANGUAGES = [
+  { code: 'zh', name: '中文' },
   { code: 'ja', name: '日本語' },
   { code: 'ko', name: '한국어' },
   { code: 'vi', name: 'Tiếng Việt' },
@@ -683,7 +691,7 @@ export default function Home() {
             <span>{t.inviteFriend}</span>
           </button>
 
-          {/* 语言选择器 */}
+          {/* 翻译目标语言选择器 */}
           <div className="flex items-center gap-2">
             <Languages size={18} className="text-gray-500" />
             <select
@@ -692,7 +700,7 @@ export default function Home() {
               className="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none cursor-pointer hover:bg-gray-100 transition-colors"
               disabled={isLoading}
             >
-              {SUPPORTED_LANGUAGES.map((lang) => (
+              {TRANSLATION_TARGET_LANGUAGES.map((lang) => (
                 <option key={lang.code} value={lang.code}>
                   {lang.name}
                 </option>
