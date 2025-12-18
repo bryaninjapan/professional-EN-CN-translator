@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2, ArrowRightLeft, Copy, Check, Download, Languages, Key, Users, Gift } from 'lucide-react';
+import { Loader2, ArrowRightLeft, Copy, Check, Download, Languages, Key, Users, Gift, ShoppingCart } from 'lucide-react';
 
 // 支持的语言配置
 const SUPPORTED_LANGUAGES = [
@@ -44,6 +44,24 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     copied: '已复制',
     activating: '激活中...',
     using: '使用中...',
+    enterLicenseKey: '请输入激活码',
+    licenseKey: '激活码',
+    activateSuccess: '激活成功',
+    invalidLicenseKey: '激活码无效',
+    creditsDepleted: '使用次数已用完',
+    creditsDepletedMessage: '使用次数已用完，请购买新的激活码',
+    pleaseActivate: '请输入激活码激活',
+    creditsRemaining: '剩余次数',
+    purchaseLicense: '购买激活码',
+    purchaseDescription: '购买激活码可获得 100 次翻译使用次数',
+    goToGumroad: '前往 Gumroad 购买',
+    purchaseNote: '购买后，激活码将通过邮件发送给您',
+    close: '关闭',
+    shareInviteCode: '分享此邀请码给朋友，双方各获得3次免费使用次数',
+    inviteCodeReward: '您和邀请者各获得 {count} 次使用次数',
+    enterInviteCodePrompt: '请输入邀请码',
+    invalidInviteCodeFormat: '邀请码格式不正确，应以 INV- 开头',
+    useInviteCodeFailed: '使用邀请码失败',
   },
   ja: {
     sourceText: '📄 原文 (English)',
@@ -76,6 +94,24 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     copied: 'コピーしました',
     activating: 'アクティベーション中...',
     using: '使用中...',
+    enterLicenseKey: 'ライセンスキーを入力してください',
+    licenseKey: 'ライセンスキー',
+    activateSuccess: '認証成功',
+    invalidLicenseKey: '無効なキー',
+    creditsDepleted: '使用回数終了',
+    creditsDepletedMessage: '使用回数が終了しました。新しいライセンスキーを購入してください',
+    pleaseActivate: 'ライセンスキーを入力して認証してください',
+    creditsRemaining: '残り回数',
+    purchaseLicense: 'アクティベーションコードを購入',
+    purchaseDescription: 'アクティベーションコードを購入すると、100回の翻訳使用回数を獲得できます',
+    goToGumroad: 'Gumroadで購入する',
+    purchaseNote: '購入後、アクティベーションコードはメールで送信されます',
+    close: '閉じる',
+    shareInviteCode: 'この招待コードを友達にシェアすると、双方が3回の無料使用回数を獲得できます',
+    inviteCodeReward: 'あなたと招待者がそれぞれ {count} 回の使用回数を獲得しました',
+    enterInviteCodePrompt: '招待コードを入力してください',
+    invalidInviteCodeFormat: '招待コードの形式が正しくありません。INV- で始まる必要があります',
+    useInviteCodeFailed: '招待コードの使用に失敗しました',
   },
   ko: {
     sourceText: '📄 원문 (English)',
@@ -108,6 +144,24 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     copied: '복사됨',
     activating: '활성화 중...',
     using: '사용 중...',
+    enterLicenseKey: '라이선스 키를 입력하세요',
+    licenseKey: '라이선스 키',
+    activateSuccess: '활성화 성공',
+    invalidLicenseKey: '유효하지 않은 키',
+    creditsDepleted: '사용 횟수 소진',
+    creditsDepletedMessage: '사용 횟수가 소진되었습니다. 새로운 라이선스 키를 구매하세요',
+    pleaseActivate: '라이선스 키를 입력하여 활성화하세요',
+    creditsRemaining: '남은 횟수',
+    purchaseLicense: '활성화 코드 구매',
+    purchaseDescription: '활성화 코드를 구매하면 100회의 번역 사용 횟수를 획득할 수 있습니다',
+    goToGumroad: 'Gumroad에서 구매하기',
+    purchaseNote: '구매 후, 활성화 코드는 이메일로 발송됩니다',
+    close: '닫기',
+    shareInviteCode: '이 초대 코드를 친구에게 공유하면, 양쪽 모두 3회의 무료 사용 횟수를 획득할 수 있습니다',
+    inviteCodeReward: '당신과 초대자가 각각 {count}회의 사용 횟수를 획득했습니다',
+    enterInviteCodePrompt: '초대 코드를 입력하세요',
+    invalidInviteCodeFormat: '초대 코드 형식이 올바르지 않습니다. INV- 로 시작해야 합니다',
+    useInviteCodeFailed: '초대 코드 사용 실패',
   },
 };
 
@@ -187,6 +241,7 @@ export default function Home() {
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [activateCodeInput, setActivateCodeInput] = useState('');
   const [isActivating, setIsActivating] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -251,11 +306,11 @@ export default function Home() {
     }
   };
 
-  // 激活码处理
+  // 激活码处理（使用服务器端系统）
   const handleActivate = async () => {
     const code = activateCodeInput.trim();
     if (!code || !deviceId) {
-      alert(t.activateCodeEmpty || '请输入激活码');
+      alert(t.enterActivateCode || '请输入激活码');
       return;
     }
 
@@ -321,13 +376,13 @@ export default function Home() {
   const handleUseInviteCode = async () => {
     const code = inviteCodeInput.trim();
     if (!code || !deviceId) {
-      alert('请输入邀请码');
+      alert(t.enterInviteCodePrompt);
       return;
     }
 
     // 验证邀请码格式（以 INV- 开头）
     if (!code.startsWith('INV-')) {
-      alert('邀请码格式不正确，应以 INV- 开头');
+      alert(t.invalidInviteCodeFormat);
       return;
     }
 
@@ -341,11 +396,11 @@ export default function Home() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`${t.inviteCodeSuccess}！您和邀请者各获得 ${data.rewardCount} 次使用次数`);
+        alert(`${t.inviteCodeSuccess}！${t.inviteCodeReward.replace('{count}', data.rewardCount.toString())}`);
         setInviteCodeInput('');
         await checkUsageCount();
       } else {
-        alert(data.error || '使用邀请码失败');
+        alert(data.error || t.useInviteCodeFailed);
       }
     } catch (error) {
       console.error('使用邀请码失败:', error);
@@ -388,8 +443,8 @@ export default function Home() {
     let usedFrom: string | null = null;
     let usedActivationCode: string | null = null;
 
-    // 先消耗使用次数
     try {
+      // 先消耗使用次数
       const consumeRes = await fetch(`${API_BASE_URL}/api/usage/consume`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -511,6 +566,16 @@ export default function Home() {
             )}
           </div>
 
+          {/* 购买按钮 */}
+          <button
+            onClick={() => setShowPurchaseModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+            disabled={isLoading}
+          >
+            <ShoppingCart size={16} />
+            <span>{t.purchaseLicense}</span>
+          </button>
+
           {/* 激活码按钮 */}
           <button
             onClick={() => setShowActivateModal(true)}
@@ -574,7 +639,7 @@ export default function Home() {
           <div className="p-4 border-t border-gray-100 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
             <button
               onClick={handleTranslate}
-              disabled={isLoading || !inputText}
+              disabled={isLoading || !inputText || (remainingCount !== null && remainingCount <= 0)}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 hover:translate-y-[-1px]"
             >
               {isLoading ? (
@@ -701,22 +766,73 @@ export default function Home() {
 
       </div>
 
+      {/* 购买激活码模态框 */}
+      {showPurchaseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <ShoppingCart size={20} />
+              {t.purchaseLicense}
+            </h2>
+            
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 mb-3">
+                {t.purchaseDescription}
+              </p>
+              <div className="flex justify-center mb-3">
+                <a
+                  href="https://642285287159.gumroad.com/l/entranslator"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-md"
+                >
+                  <ShoppingCart size={18} />
+                  {t.goToGumroad}
+                </a>
+              </div>
+              <p className="text-xs text-gray-600 text-center">
+                {t.purchaseNote}
+              </p>
+            </div>
+            
+            <button
+              onClick={() => setShowPurchaseModal(false)}
+              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              {t.close}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 激活码输入模态框 */}
       {showActivateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <Key size={20} />
-              {t.enterActivateCode}
+              {t.licenseKey || t.activateCode}
             </h2>
-            <input
-              type="text"
-              value={activateCodeInput}
-              onChange={(e) => setActivateCodeInput(e.target.value)}
-              placeholder={t.enterActivateCode}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none mb-4"
-              onKeyPress={(e) => e.key === 'Enter' && handleActivate()}
-            />
+            
+            <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-600 mb-2">{t.enterActivateCode}</p>
+              <p className="text-xs text-gray-500">购买后，激活码将通过邮件发送给您</p>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t.enterActivateCode}
+              </label>
+              <input
+                type="text"
+                value={activateCodeInput}
+                onChange={(e) => setActivateCodeInput(e.target.value)}
+                placeholder="输入激活码"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono text-sm"
+                onKeyPress={(e) => e.key === 'Enter' && handleActivate()}
+              />
+            </div>
+            
             <div className="flex gap-3">
               <button
                 onClick={handleActivate}
@@ -739,7 +855,7 @@ export default function Home() {
                 }}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                取消
+                关闭
               </button>
             </div>
           </div>
@@ -781,7 +897,7 @@ export default function Home() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  分享此邀请码给朋友，双方各获得3次免费使用次数
+                  {t.shareInviteCode}
                 </p>
               </div>
             )}
@@ -825,7 +941,7 @@ export default function Home() {
               }}
               className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              关闭
+              {t.close}
             </button>
           </div>
         </div>
