@@ -10,7 +10,9 @@
     "export": "next build",
     "pages:build": "npx @cloudflare/next-on-pages",
     "pages:preview": "npm run pages:build && wrangler pages dev",
-    "pages:deploy": "npm run pages:build && wrangler pages deploy"
+    "pages:deploy": "npm run pages:build && wrangler pages deploy",
+    "db:init": "bash scripts/init-db.sh",
+    "db:test": "npx wrangler d1 execute en-translator-db --command=\"SELECT name FROM sqlite_master WHERE type='table';\""
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

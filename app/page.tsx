@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2, ArrowRightLeft, Copy, Check, Download, Languages } from 'lucide-react';
+import { Loader2, ArrowRightLeft, Copy, Check, Download, Languages, Key, Users, Gift } from 'lucide-react';
 
 // 支持的语言配置
 const SUPPORTED_LANGUAGES = [
@@ -28,6 +28,22 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     networkError: '网络请求失败，请重试',
     noContent: '无内容',
     none: '无',
+    remainingCount: '剩余次数',
+    activateCode: '激活码',
+    enterActivateCode: '输入激活码',
+    activate: '激活',
+    inviteFriend: '邀请朋友',
+    myInviteCode: '我的邀请码',
+    enterInviteCode: '输入邀请码',
+    useInviteCode: '使用邀请码',
+    generateInviteCode: '生成邀请码',
+    noRemainingCount: '使用次数不足',
+    activateCodeSuccess: '激活成功',
+    inviteCodeSuccess: '邀请码使用成功',
+    copyInviteCode: '复制邀请码',
+    copied: '已复制',
+    activating: '激活中...',
+    using: '使用中...',
   },
   ja: {
     sourceText: '📄 原文 (English)',
@@ -44,6 +60,22 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     networkError: 'ネットワークリクエストに失敗しました。再試行してください',
     noContent: 'コンテンツなし',
     none: 'なし',
+    remainingCount: '残り回数',
+    activateCode: 'アクティベーションコード',
+    enterActivateCode: 'アクティベーションコードを入力',
+    activate: 'アクティベート',
+    inviteFriend: '友達を招待',
+    myInviteCode: '私の招待コード',
+    enterInviteCode: '招待コードを入力',
+    useInviteCode: '招待コードを使用',
+    generateInviteCode: '招待コードを生成',
+    noRemainingCount: '使用回数が不足しています',
+    activateCodeSuccess: 'アクティベーション成功',
+    inviteCodeSuccess: '招待コード使用成功',
+    copyInviteCode: '招待コードをコピー',
+    copied: 'コピーしました',
+    activating: 'アクティベーション中...',
+    using: '使用中...',
   },
   ko: {
     sourceText: '📄 원문 (English)',
@@ -60,6 +92,22 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     networkError: '네트워크 요청 실패, 다시 시도해주세요',
     noContent: '내용 없음',
     none: '없음',
+    remainingCount: '남은 횟수',
+    activateCode: '활성화 코드',
+    enterActivateCode: '활성화 코드 입력',
+    activate: '활성화',
+    inviteFriend: '친구 초대',
+    myInviteCode: '내 초대 코드',
+    enterInviteCode: '초대 코드 입력',
+    useInviteCode: '초대 코드 사용',
+    generateInviteCode: '초대 코드 생성',
+    noRemainingCount: '사용 횟수가 부족합니다',
+    activateCodeSuccess: '활성화 성공',
+    inviteCodeSuccess: '초대 코드 사용 성공',
+    copyInviteCode: '초대 코드 복사',
+    copied: '복사됨',
+    activating: '활성화 중...',
+    using: '사용 중...',
   },
 };
 
@@ -77,6 +125,19 @@ type TranslationSections = {
   terms: string;
   analysis: string;
 };
+
+// 生成设备ID
+function getDeviceId(): string {
+  if (typeof window === 'undefined') return '';
+  
+  let deviceId = localStorage.getItem('device_id');
+  if (!deviceId) {
+    // 使用 crypto.randomUUID() 生成设备ID
+    deviceId = crypto.randomUUID();
+    localStorage.setItem('device_id', deviceId);
+  }
+  return deviceId;
+}
 
 // 工具函数：下载文件
 const downloadMarkdown = (sections: TranslationSections, sourceText: string, targetLang: string) => {
@@ -118,6 +179,20 @@ export default function Home() {
   const [inputText, setInputText] = useState('');
   const [targetLang, setTargetLang] = useState('zh');
   const [isLoading, setIsLoading] = useState(false);
+  const [deviceId, setDeviceId] = useState('');
+  const [remainingCount, setRemainingCount] = useState<number | null>(null);
+  const [isCheckingCount, setIsCheckingCount] = useState(false);
+  
+  // 激活码和邀请码相关状态
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [activateCodeInput, setActivateCodeInput] = useState('');
+  const [isActivating, setIsActivating] = useState(false);
+  
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [myInviteCode, setMyInviteCode] = useState('');
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+  const [isUsingInvite, setIsUsingInvite] = useState(false);
   
   const [sections, setSections] = useState<TranslationSections>({
     translation: '',
@@ -131,19 +206,217 @@ export default function Home() {
   // 获取当前语言的UI文本
   const t = UI_TEXT[targetLang] || UI_TEXT['zh'];
 
+  // 初始化设备ID和检查使用次数
+  useEffect(() => {
+    const id = getDeviceId();
+    setDeviceId(id);
+    checkUsageCount(id);
+
+    // 定期刷新使用次数（每30秒）
+    const interval = setInterval(() => {
+      if (id) {
+        checkUsageCount(id);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 检查使用次数
+  const checkUsageCount = async (deviceIdToCheck?: string) => {
+    const id = deviceIdToCheck || deviceId;
+    if (!id) return;
+
+    setIsCheckingCount(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/usage/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId: id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRemainingCount(data.totalCount);
+      } else {
+        // 如果检查失败，可能是首次使用，设置为0让用户知道需要激活
+        if (data.error?.includes('设备ID')) {
+          setRemainingCount(0);
+        }
+      }
+    } catch (error) {
+      console.error('检查使用次数失败:', error);
+      // 网络错误时不更新，保持当前值
+    } finally {
+      setIsCheckingCount(false);
+    }
+  };
+
+  // 激活码处理
+  const handleActivate = async () => {
+    const code = activateCodeInput.trim();
+    if (!code || !deviceId) {
+      alert(t.activateCodeEmpty || '请输入激活码');
+      return;
+    }
+
+    // 验证激活码格式（至少4个字符）
+    if (code.length < 4) {
+      alert('激活码格式不正确');
+      return;
+    }
+
+    setIsActivating(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/activate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, deviceId }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`${t.activateCodeSuccess}！获得 ${data.remainingCount} 次使用次数`);
+        setActivateCodeInput('');
+        setShowActivateModal(false);
+        await checkUsageCount();
+      } else {
+        alert(data.error || '激活失败');
+      }
+    } catch (error) {
+      console.error('激活失败:', error);
+      alert(t.networkError);
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
+  // 生成邀请码
+  const handleGenerateInviteCode = async () => {
+    if (!deviceId) return;
+
+    setIsGeneratingInvite(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/invite/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setMyInviteCode(data.code);
+        setShowInviteModal(true);
+      } else {
+        alert(data.error || '生成邀请码失败');
+      }
+    } catch (error) {
+      console.error('生成邀请码失败:', error);
+      alert(t.networkError);
+    } finally {
+      setIsGeneratingInvite(false);
+    }
+  };
+
+  // 使用邀请码
+  const handleUseInviteCode = async () => {
+    const code = inviteCodeInput.trim();
+    if (!code || !deviceId) {
+      alert('请输入邀请码');
+      return;
+    }
+
+    // 验证邀请码格式（以 INV- 开头）
+    if (!code.startsWith('INV-')) {
+      alert('邀请码格式不正确，应以 INV- 开头');
+      return;
+    }
+
+    setIsUsingInvite(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/invite/use`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, deviceId }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`${t.inviteCodeSuccess}！您和邀请者各获得 ${data.rewardCount} 次使用次数`);
+        setInviteCodeInput('');
+        await checkUsageCount();
+      } else {
+        alert(data.error || '使用邀请码失败');
+      }
+    } catch (error) {
+      console.error('使用邀请码失败:', error);
+      alert(t.networkError);
+    } finally {
+      setIsUsingInvite(false);
+    }
+  };
+
   // 翻译处理
   const handleTranslate = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim()) {
+      alert('请输入需要翻译的文本');
+      return;
+    }
+
+    // 验证文本长度（避免过长文本）
+    if (inputText.length > 50000) {
+      alert('文本过长，请分段翻译（最大50000字符）');
+      return;
+    }
+
+    // 检查使用次数
+    if (remainingCount === null) {
+      await checkUsageCount();
+      return;
+    }
+
+    if (remainingCount <= 0) {
+      alert(t.noRemainingCount + '，请激活激活码或使用邀请码');
+      setShowActivateModal(true);
+      return;
+    }
 
     setIsLoading(true);
     // 清空之前的结果
     setSections({ translation: '', terms: '', analysis: '' });
 
-    const formData = new FormData();
-    formData.append('text', inputText);
-    formData.append('targetLang', targetLang);
+    let consumeData: any = null;
+    let usedFrom: string | null = null;
+    let usedActivationCode: string | null = null;
 
+    // 先消耗使用次数
     try {
+      const consumeRes = await fetch(`${API_BASE_URL}/api/usage/consume`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          deviceId, 
+          textLength: inputText.length
+        }),
+      });
+
+      consumeData = await consumeRes.json();
+      if (!consumeData.success) {
+        alert(consumeData.error || t.noRemainingCount);
+        setIsLoading(false);
+        await checkUsageCount();
+        return;
+      }
+
+      // 更新剩余次数
+      setRemainingCount(consumeData.remainingCount);
+      usedFrom = consumeData.usedFrom;
+      usedActivationCode = consumeData.usedActivationCode;
+
+      // 执行翻译
+      const formData = new FormData();
+      formData.append('text', inputText);
+      formData.append('targetLang', targetLang);
+
       const res = await fetch(`${API_BASE_URL}/api/translate`, {
         method: 'POST',
         body: formData,
@@ -159,12 +432,48 @@ export default function Home() {
           terms: parts[1]?.trim() || t.none,
           analysis: parts[2]?.trim() || t.none
         });
-        } else {
+      } else {
+        // 翻译失败，恢复使用次数
+        try {
+          await fetch(`${API_BASE_URL}/api/usage/restore`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              deviceId,
+              usedFrom,
+              activationCode: usedActivationCode,
+            }),
+          });
+          await checkUsageCount();
+        } catch (restoreError) {
+          console.error('恢复使用次数失败:', restoreError);
+        }
+        
         alert(`${t.translationFailed}: ${data.error || '未知错误'} \n ${data.details || ''}`);
       }
     } catch (error) {
       console.error("请求错误:", error);
+      
+      // 如果消耗了次数但翻译失败，尝试恢复
+      if (consumeData?.success && usedFrom) {
+        try {
+          await fetch(`${API_BASE_URL}/api/usage/restore`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              deviceId,
+              usedFrom,
+              activationCode: usedActivationCode,
+            }),
+          });
+          await checkUsageCount();
+        } catch (restoreError) {
+          console.error('恢复使用次数失败:', restoreError);
+        }
+      }
+      
       alert(t.networkError);
+      await checkUsageCount();
     } finally {
       setIsLoading(false);
     }
@@ -184,26 +493,64 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-gray-50 font-sans text-gray-800">
       
       {/* 顶部栏 */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm">
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm flex-wrap gap-3">
         <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <span className="text-blue-600 bg-blue-50 p-1 rounded">EN</span> Translator
         </h1>
 
-        {/* 语言选择器 */}
-        <div className="flex items-center gap-2">
-          <Languages size={18} className="text-gray-500" />
-          <select
-            value={targetLang}
-            onChange={(e) => setTargetLang(e.target.value)}
-            className="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none cursor-pointer hover:bg-gray-100 transition-colors"
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* 使用次数显示 */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+            <span className="text-xs font-medium text-blue-700">{t.remainingCount}:</span>
+            {isCheckingCount ? (
+              <Loader2 size={14} className="animate-spin text-blue-600" />
+            ) : (
+              <span className="text-sm font-bold text-blue-600">
+                {remainingCount !== null ? remainingCount : '...'}
+              </span>
+            )}
+          </div>
+
+          {/* 激活码按钮 */}
+          <button
+            onClick={() => setShowActivateModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
             disabled={isLoading}
           >
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.name}
-              </option>
-            ))}
-          </select>
+            <Key size={16} />
+            <span>{t.activateCode}</span>
+          </button>
+
+          {/* 邀请朋友按钮 */}
+          <button
+            onClick={handleGenerateInviteCode}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 text-sm rounded-lg transition-colors"
+            disabled={isLoading || isGeneratingInvite}
+          >
+            {isGeneratingInvite ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Users size={16} />
+            )}
+            <span>{t.inviteFriend}</span>
+          </button>
+
+          {/* 语言选择器 */}
+          <div className="flex items-center gap-2">
+            <Languages size={18} className="text-gray-500" />
+            <select
+              value={targetLang}
+              onChange={(e) => setTargetLang(e.target.value)}
+              className="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none cursor-pointer hover:bg-gray-100 transition-colors"
+              disabled={isLoading}
+            >
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -353,6 +700,136 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* 激活码输入模态框 */}
+      {showActivateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Key size={20} />
+              {t.enterActivateCode}
+            </h2>
+            <input
+              type="text"
+              value={activateCodeInput}
+              onChange={(e) => setActivateCodeInput(e.target.value)}
+              placeholder={t.enterActivateCode}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none mb-4"
+              onKeyPress={(e) => e.key === 'Enter' && handleActivate()}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleActivate}
+                disabled={isActivating || !activateCodeInput.trim()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {isActivating ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    {t.activating || '激活中...'}
+                  </>
+                ) : (
+                  t.activate
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowActivateModal(false);
+                  setActivateCodeInput('');
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 邀请码模态框 */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Gift size={20} />
+              {t.inviteFriend}
+            </h2>
+
+            {/* 我的邀请码 */}
+            {myInviteCode && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t.myInviteCode}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={myInviteCode}
+                    readOnly
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(myInviteCode);
+                      setCopyStatus(prev => ({ ...prev, invite: true }));
+                      setTimeout(() => setCopyStatus(prev => ({ ...prev, invite: false })), 2000);
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    {copyStatus['invite'] ? <Check size={16} /> : <Copy size={16} />}
+                    {copyStatus['invite'] ? t.copied : t.copyInviteCode}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  分享此邀请码给朋友，双方各获得3次免费使用次数
+                </p>
+              </div>
+            )}
+
+            {/* 使用邀请码 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t.enterInviteCode}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inviteCodeInput}
+                  onChange={(e) => setInviteCodeInput(e.target.value)}
+                  placeholder={t.enterInviteCode}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  onKeyPress={(e) => e.key === 'Enter' && handleUseInviteCode()}
+                />
+                <button
+                  onClick={handleUseInviteCode}
+                  disabled={isUsingInvite || !inviteCodeInput.trim()}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  {isUsingInvite ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      {t.using || '使用中...'}
+                    </>
+                  ) : (
+                    t.useInviteCode
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowInviteModal(false);
+                setInviteCodeInput('');
+                setMyInviteCode('');
+              }}
+              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

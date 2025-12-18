@@ -3,6 +3,13 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
 
+# D1 数据库配置
+[[d1_databases]]
+binding = "DB"
+database_name = "en-translator-db"
+database_id = "03af92ab-9c68-4c0e-9313-54c1d33f8a84" # 需要在 Cloudflare Dashboard 创建数据库后填入
+
 [vars]
 # 可选：在此设置环境变量，或在 Cloudflare Dashboard 中设置
 # GEMINI_API_KEY = "your-api-key"
+# ADMIN_PASSWORD = "your-admin-password" # 后台管理密码
