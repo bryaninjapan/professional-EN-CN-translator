@@ -9,6 +9,7 @@ const SUPPORTED_LANGUAGES = [
   { code: 'zh', name: '简体中文' },
   { code: 'ja', name: '日本語' },
   { code: 'ko', name: '한국어' },
+  { code: 'vi', name: 'Tiếng Việt' },
 ];
 
 // UI 文本翻译映射
@@ -62,6 +63,14 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     enterInviteCodePrompt: '请输入邀请码',
     invalidInviteCodeFormat: '邀请码格式不正确，应以 INV- 开头',
     useInviteCodeFailed: '使用邀请码失败',
+    receivedCredits: '获得 {count} 次使用次数',
+    invalidActivateCodeFormat: '激活码格式不正确',
+    activateFailed: '激活失败',
+    enterTextToTranslate: '请输入需要翻译的文本',
+    pleaseActivateOrUseInvite: '，请激活激活码或使用邀请码',
+    unknownError: '未知错误',
+    generateInviteCodeFailed: '生成邀请码失败',
+    textTooLong: '文本过长，请分段翻译（最大50000字符）',
   },
   ja: {
     sourceText: '📄 原文 (English)',
@@ -112,6 +121,14 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     enterInviteCodePrompt: '招待コードを入力してください',
     invalidInviteCodeFormat: '招待コードの形式が正しくありません。INV- で始まる必要があります',
     useInviteCodeFailed: '招待コードの使用に失敗しました',
+    receivedCredits: '{count} 回の使用回数を獲得しました',
+    invalidActivateCodeFormat: 'アクティベーションコードの形式が正しくありません',
+    activateFailed: 'アクティベーションに失敗しました',
+    enterTextToTranslate: '翻訳するテキストを入力してください',
+    pleaseActivateOrUseInvite: '、アクティベーションコードをアクティベートするか、招待コードを使用してください',
+    unknownError: '不明なエラー',
+    generateInviteCodeFailed: '招待コードの生成に失敗しました',
+    textTooLong: 'テキストが長すぎます。分割して翻訳してください（最大50000文字）',
   },
   ko: {
     sourceText: '📄 원문 (English)',
@@ -162,6 +179,72 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     enterInviteCodePrompt: '초대 코드를 입력하세요',
     invalidInviteCodeFormat: '초대 코드 형식이 올바르지 않습니다. INV- 로 시작해야 합니다',
     useInviteCodeFailed: '초대 코드 사용 실패',
+    receivedCredits: '{count}회의 사용 횟수를 획득했습니다',
+    invalidActivateCodeFormat: '활성화 코드 형식이 올바르지 않습니다',
+    activateFailed: '활성화 실패',
+    enterTextToTranslate: '번역할 텍스트를 입력하세요',
+    pleaseActivateOrUseInvite: ', 활성화 코드를 활성화하거나 초대 코드를 사용하세요',
+    unknownError: '알 수 없는 오류',
+    generateInviteCodeFailed: '초대 코드 생성 실패',
+    textTooLong: '텍스트가 너무 깁니다. 분할하여 번역하세요 (최대 50000자)',
+  },
+  vi: {
+    sourceText: '📄 Văn bản gốc (English)',
+    placeholder: 'Dán văn bản tiếng Anh cần dịch vào đây...',
+    translateButton: 'Bắt đầu dịch toàn bộ quy trình',
+    translating: 'Đang dịch chi tiết...',
+    resultTitle: '✨ Kết quả dịch',
+    waitingInput: 'Đang chờ nhập liệu...',
+    translationTitle: '1. Bản dịch văn bản gốc',
+    termsTitle: '2. Bảng thuật ngữ chuyên ngành',
+    analysisTitle: '3. Phân tích điểm khó và ngữ cảnh',
+    downloadMD: 'Tải xuống MD',
+    translationFailed: 'Dịch thất bại',
+    networkError: 'Yêu cầu mạng thất bại, vui lòng thử lại',
+    noContent: 'Không có nội dung',
+    none: 'Không có',
+    remainingCount: 'Số lần còn lại',
+    activateCode: 'Mã kích hoạt',
+    enterActivateCode: 'Nhập mã kích hoạt',
+    activate: 'Kích hoạt',
+    inviteFriend: 'Mời bạn bè',
+    myInviteCode: 'Mã mời của tôi',
+    enterInviteCode: 'Nhập mã mời',
+    useInviteCode: 'Sử dụng mã mời',
+    generateInviteCode: 'Tạo mã mời',
+    noRemainingCount: 'Số lần sử dụng không đủ',
+    activateCodeSuccess: 'Kích hoạt thành công',
+    inviteCodeSuccess: 'Sử dụng mã mời thành công',
+    copyInviteCode: 'Sao chép mã mời',
+    copied: 'Đã sao chép',
+    activating: 'Đang kích hoạt...',
+    using: 'Đang sử dụng...',
+    enterLicenseKey: 'Vui lòng nhập mã kích hoạt',
+    licenseKey: 'Mã kích hoạt',
+    activateSuccess: 'Kích hoạt thành công',
+    invalidLicenseKey: 'Mã kích hoạt không hợp lệ',
+    creditsDepleted: 'Số lần sử dụng đã hết',
+    creditsDepletedMessage: 'Số lần sử dụng đã hết, vui lòng mua mã kích hoạt mới',
+    pleaseActivate: 'Vui lòng nhập mã kích hoạt để kích hoạt',
+    creditsRemaining: 'Số lần còn lại',
+    purchaseLicense: 'Mua mã kích hoạt',
+    purchaseDescription: 'Mua mã kích hoạt để nhận 100 lần sử dụng dịch',
+    goToGumroad: 'Đến Gumroad để mua',
+    purchaseNote: 'Sau khi mua, mã kích hoạt sẽ được gửi qua email cho bạn',
+    close: 'Đóng',
+    shareInviteCode: 'Chia sẻ mã mời này cho bạn bè, cả hai bên sẽ nhận được 3 lần sử dụng miễn phí',
+    inviteCodeReward: 'Bạn và người mời mỗi người nhận được {count} lần sử dụng',
+    enterInviteCodePrompt: 'Vui lòng nhập mã mời',
+    invalidInviteCodeFormat: 'Định dạng mã mời không đúng, phải bắt đầu bằng INV-',
+    useInviteCodeFailed: 'Sử dụng mã mời thất bại',
+    receivedCredits: 'Nhận được {count} lần sử dụng',
+    invalidActivateCodeFormat: 'Định dạng mã kích hoạt không đúng',
+    activateFailed: 'Kích hoạt thất bại',
+    enterTextToTranslate: 'Vui lòng nhập văn bản cần dịch',
+    pleaseActivateOrUseInvite: ', vui lòng kích hoạt mã kích hoạt hoặc sử dụng mã mời',
+    unknownError: 'Lỗi không xác định',
+    generateInviteCodeFailed: 'Tạo mã mời thất bại',
+    textTooLong: 'Văn bản quá dài, vui lòng dịch từng phần (tối đa 50000 ký tự)',
   },
 };
 
@@ -310,13 +393,13 @@ export default function Home() {
   const handleActivate = async () => {
     const code = activateCodeInput.trim();
     if (!code || !deviceId) {
-      alert(t.enterActivateCode || '请输入激活码');
+      alert(t.enterActivateCode);
       return;
     }
 
     // 验证激活码格式（至少4个字符）
     if (code.length < 4) {
-      alert('激活码格式不正确');
+      alert(t.invalidActivateCodeFormat);
       return;
     }
 
@@ -330,12 +413,12 @@ export default function Home() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`${t.activateCodeSuccess}！获得 ${data.remainingCount} 次使用次数`);
+        alert(`${t.activateCodeSuccess}！${t.receivedCredits.replace('{count}', data.remainingCount.toString())}`);
         setActivateCodeInput('');
         setShowActivateModal(false);
         await checkUsageCount();
       } else {
-        alert(data.error || '激活失败');
+        alert(data.error || t.activateFailed);
       }
     } catch (error) {
       console.error('激活失败:', error);
@@ -362,7 +445,7 @@ export default function Home() {
         setMyInviteCode(data.code);
         setShowInviteModal(true);
       } else {
-        alert(data.error || '生成邀请码失败');
+        alert(data.error || t.generateInviteCodeFailed);
       }
     } catch (error) {
       console.error('生成邀请码失败:', error);
@@ -413,13 +496,13 @@ export default function Home() {
   // 翻译处理
   const handleTranslate = async () => {
     if (!inputText.trim()) {
-      alert('请输入需要翻译的文本');
+      alert(t.enterTextToTranslate);
       return;
     }
 
     // 验证文本长度（避免过长文本）
     if (inputText.length > 50000) {
-      alert('文本过长，请分段翻译（最大50000字符）');
+      alert(t.textTooLong);
       return;
     }
 
@@ -430,7 +513,7 @@ export default function Home() {
     }
 
     if (remainingCount <= 0) {
-      alert(t.noRemainingCount + '，请激活激活码或使用邀请码');
+      alert(t.noRemainingCount + t.pleaseActivateOrUseInvite);
       setShowActivateModal(true);
       return;
     }
@@ -504,7 +587,7 @@ export default function Home() {
           console.error('恢复使用次数失败:', restoreError);
         }
         
-        alert(`${t.translationFailed}: ${data.error || '未知错误'} \n ${data.details || ''}`);
+        alert(`${t.translationFailed}: ${data.error || t.unknownError} \n ${data.details || ''}`);
       }
     } catch (error) {
       console.error("请求错误:", error);
