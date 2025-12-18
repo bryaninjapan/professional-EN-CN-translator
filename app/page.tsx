@@ -11,6 +11,58 @@ const SUPPORTED_LANGUAGES = [
   { code: 'ko', name: '한국어' },
 ];
 
+// UI 文本翻译映射
+const UI_TEXT: Record<string, Record<string, string>> = {
+  zh: {
+    sourceText: '📄 原文 (English)',
+    placeholder: '在此粘贴需要翻译的英文文本...',
+    translateButton: '开始全流程翻译',
+    translating: '正在深度翻译...',
+    resultTitle: '✨ 翻译结果',
+    waitingInput: '等待输入...',
+    translationTitle: '1. 原文翻译',
+    termsTitle: '2. 专业术语表',
+    analysisTitle: '3. 难点与语境解析',
+    downloadMD: '下载 MD',
+    translationFailed: '翻译失败',
+    networkError: '网络请求失败，请重试',
+    noContent: '无内容',
+    none: '无',
+  },
+  ja: {
+    sourceText: '📄 原文 (English)',
+    placeholder: '翻訳する英文をここに貼り付けてください...',
+    translateButton: '全プロセス翻訳を開始',
+    translating: '詳細翻訳中...',
+    resultTitle: '✨ 翻訳結果',
+    waitingInput: '入力を待っています...',
+    translationTitle: '1. 原文翻訳',
+    termsTitle: '2. 専門用語表',
+    analysisTitle: '3. 難点と文脈解析',
+    downloadMD: 'MDをダウンロード',
+    translationFailed: '翻訳に失敗しました',
+    networkError: 'ネットワークリクエストに失敗しました。再試行してください',
+    noContent: 'コンテンツなし',
+    none: 'なし',
+  },
+  ko: {
+    sourceText: '📄 원문 (English)',
+    placeholder: '번역할 영어 텍스트를 여기에 붙여넣으세요...',
+    translateButton: '전체 프로세스 번역 시작',
+    translating: '심층 번역 중...',
+    resultTitle: '✨ 번역 결과',
+    waitingInput: '입력 대기 중...',
+    translationTitle: '1. 원문 번역',
+    termsTitle: '2. 전문 용어표',
+    analysisTitle: '3. 난점 및 맥락 분석',
+    downloadMD: 'MD 다운로드',
+    translationFailed: '번역 실패',
+    networkError: '네트워크 요청 실패, 다시 시도해주세요',
+    noContent: '내용 없음',
+    none: '없음',
+  },
+};
+
 // API 基础 URL 配置（用于 GitHub Pages 静态部署时指向外部 API）
 // GitHub Pages 部署时会自动使用 Vercel API
 // 本地开发时使用相对路径（空字符串）
@@ -27,25 +79,26 @@ type TranslationSections = {
 };
 
 // 工具函数：下载文件
-const downloadMarkdown = (sections: TranslationSections, sourceText: string) => {
-  const content = `# 翻译结果
+const downloadMarkdown = (sections: TranslationSections, sourceText: string, targetLang: string) => {
+  const t = UI_TEXT[targetLang] || UI_TEXT['zh'];
+  const content = `# ${t.resultTitle}
 
-## 原文
+## ${t.sourceText}
 ${sourceText}
 
 ---
 
-## 1. 原文翻译
+## ${t.translationTitle}
 ${sections.translation}
 
 ---
 
-## 2. 专业术语表
+## ${t.termsTitle}
 ${sections.terms}
 
 ---
 
-## 3. 难点与语境解析
+## ${t.analysisTitle}
 ${sections.analysis}
 `;
   
@@ -75,6 +128,9 @@ export default function Home() {
   // 复制状态
   const [copyStatus, setCopyStatus] = useState<{[key: string]: boolean}>({});
 
+  // 获取当前语言的UI文本
+  const t = UI_TEXT[targetLang] || UI_TEXT['zh'];
+
   // 翻译处理
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
@@ -99,16 +155,16 @@ export default function Home() {
         // 解析结果
         const parts = data.result.split('---SECTION_SEPARATOR---');
         setSections({
-          translation: parts[0]?.trim() || '无内容',
-          terms: parts[1]?.trim() || '无',
-          analysis: parts[2]?.trim() || '无'
+          translation: parts[0]?.trim() || t.noContent,
+          terms: parts[1]?.trim() || t.none,
+          analysis: parts[2]?.trim() || t.none
         });
-      } else {
-        alert(`翻译失败: ${data.error || '未知错误'} \n ${data.details || ''}`);
+        } else {
+        alert(`${t.translationFailed}: ${data.error || '未知错误'} \n ${data.details || ''}`);
       }
     } catch (error) {
       console.error("请求错误:", error);
-      alert("网络请求失败，请重试");
+      alert(t.networkError);
     } finally {
       setIsLoading(false);
     }
@@ -158,13 +214,13 @@ export default function Home() {
         <div className="w-full md:w-2/5 flex flex-col border-r border-gray-200 bg-white md:h-full">
           <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
             <span className="text-sm font-semibold text-gray-600 flex items-center gap-2">
-              📄 原文 (English)
+              {t.sourceText}
             </span>
             <span className="text-xs text-gray-400">{inputText.length} chars</span>
           </div>
           <textarea
             className="flex-1 w-full p-6 resize-none focus:outline-none text-lg leading-relaxed text-gray-700 font-mono"
-            placeholder="在此粘贴需要翻译的英文文本..."
+            placeholder={t.placeholder}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
           />
@@ -177,12 +233,12 @@ export default function Home() {
               {isLoading ? (
                 <>
                   <Loader2 className="animate-spin" size={20} />
-                  正在深度翻译...
+                  {t.translating}
                 </>
               ) : (
                 <>
                   <ArrowRightLeft size={20} />
-                  开始全流程翻译
+                  {t.translateButton}
                 </>
               )}
             </button>
@@ -195,15 +251,15 @@ export default function Home() {
           {/* 工具栏 */}
           <div className="p-3 border-b border-gray-200 bg-white flex justify-between items-center shadow-sm z-10">
             <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-              ✨ 翻译结果
+              {t.resultTitle}
             </span>
             {sections.translation && (
               <button 
-                onClick={() => downloadMarkdown(sections, inputText)}
+                onClick={() => downloadMarkdown(sections, inputText, targetLang)}
                 className="flex items-center gap-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-md transition-colors shadow-sm"
               >
                 <Download size={14} />
-                下载 MD
+                {t.downloadMD}
               </button>
             )}
           </div>
@@ -214,7 +270,7 @@ export default function Home() {
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                   <ArrowRightLeft size={32} className="opacity-20" />
                 </div>
-                <p className="text-sm">等待输入...</p>
+                <p className="text-sm">{t.waitingInput}</p>
               </div>
             ) : null}
 
@@ -222,7 +278,7 @@ export default function Home() {
             {(sections.translation || isLoading) && (
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="bg-blue-50 px-4 py-2 border-b border-blue-100 flex justify-between items-center">
-                  <h3 className="font-bold text-blue-800 text-sm">1. 原文翻译</h3>
+                  <h3 className="font-bold text-blue-800 text-sm">{t.translationTitle}</h3>
                   <button 
                     onClick={() => copyToClipboard(sections.translation, 'trans')}
                     className="text-blue-400 hover:text-blue-600 p-1 rounded hover:bg-blue-100 transition-colors"
@@ -248,7 +304,7 @@ export default function Home() {
             {(sections.terms || isLoading) && (
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="bg-amber-50 px-4 py-2 border-b border-amber-100 flex justify-between items-center">
-                  <h3 className="font-bold text-amber-800 text-sm">2. 专业术语表</h3>
+                  <h3 className="font-bold text-amber-800 text-sm">{t.termsTitle}</h3>
                   <button 
                     onClick={() => copyToClipboard(sections.terms, 'terms')}
                     className="text-amber-400 hover:text-amber-600 p-1 rounded hover:bg-amber-100 transition-colors"
@@ -273,7 +329,7 @@ export default function Home() {
             {(sections.analysis || isLoading) && (
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-10">
                 <div className="bg-purple-50 px-4 py-2 border-b border-purple-100 flex justify-between items-center">
-                  <h3 className="font-bold text-purple-800 text-sm">3. 难点与语境解析</h3>
+                  <h3 className="font-bold text-purple-800 text-sm">{t.analysisTitle}</h3>
                   <button 
                     onClick={() => copyToClipboard(sections.analysis, 'analysis')}
                     className="text-purple-400 hover:text-purple-600 p-1 rounded hover:bg-purple-100 transition-colors"
