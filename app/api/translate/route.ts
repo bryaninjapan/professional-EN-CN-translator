@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 // CORS 头部配置
 const corsHeaders = {
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     if (!apiKey) {
       return NextResponse.json({ 
         error: "未提供 API Key",
-        details: "请在设置中输入您的 Gemini API Key"
+        details: "API Key 未配置，请联系管理员"
       }, { status: 401, headers: corsHeaders });
     }
 

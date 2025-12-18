@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 export async function GET() {
   // 检查环境变量是否被正确读取
   const apiKey = process.env.GEMINI_API_KEY;

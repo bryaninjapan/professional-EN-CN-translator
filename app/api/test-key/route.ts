@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 // CORS 头部配置
 const corsHeaders = {

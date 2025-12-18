@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2, ArrowRightLeft, Copy, Check, Settings, Save, Download, PlayCircle } from 'lucide-react';
+import { Loader2, ArrowRightLeft, Copy, Check, Download } from 'lucide-react';
 
 // API 基础 URL 配置（用于 GitHub Pages 静态部署时指向外部 API）
 // GitHub Pages 部署时会自动使用 Vercel API
@@ -55,10 +55,6 @@ ${sections.analysis}
 
 export default function Home() {
   // 状态管理
-  const [apiKey, setApiKey] = useState('');
-  const [isKeySaved, setIsKeySaved] = useState(false);
-  const [isTestingKey, setIsTestingKey] = useState(false);
-  
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -71,71 +67,9 @@ export default function Home() {
   // 复制状态
   const [copyStatus, setCopyStatus] = useState<{[key: string]: boolean}>({});
 
-  // 初始化加载 API Key
-  useEffect(() => {
-    const savedKey = localStorage.getItem('gemini_api_key');
-    if (savedKey) {
-      setApiKey(savedKey);
-      setIsKeySaved(true);
-    }
-  }, []);
-
-  // 保存 API Key
-  const saveKey = () => {
-    if (!apiKey.trim()) return;
-    localStorage.setItem('gemini_api_key', apiKey.trim());
-    setIsKeySaved(true);
-    alert('API Key 已保存');
-  };
-
-  // 测试 API Key
-  const testKey = async () => {
-    if (!apiKey.trim()) return;
-    setIsTestingKey(true);
-    // #region agent log
-    console.log('[DEBUG testKey-entry]', {API_BASE_URL,apiKeyLength:apiKey.length,timestamp:Date.now()});
-    fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-entry',message:'testKey started',data:{API_BASE_URL,apiKeyLength:apiKey.length},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
-    try {
-      const fullUrl = `${API_BASE_URL}/api/test-key`;
-      // #region agent log
-      console.log('[DEBUG testKey-url]', {fullUrl,baseUrl:API_BASE_URL,timestamp:Date.now()});
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-url',message:'constructed URL',data:{fullUrl,baseUrl:API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
-      const res = await fetch(fullUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: apiKey.trim() }),
-      });
-      // #region agent log
-      console.log('[DEBUG testKey-response]', {status:res.status,ok:res.ok,statusText:res.statusText,timestamp:Date.now()});
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-response',message:'fetch response received',data:{status:res.status,ok:res.ok,statusText:res.statusText,headers:Object.fromEntries(res.headers.entries())},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H3'})}).catch(()=>{});
-      // #endregion
-      if (res.ok) {
-        alert('✅ API Key 测试通过！');
-      } else {
-        const data = await res.json();
-        alert(`❌ 测试失败: ${data.error}`);
-      }
-    } catch (e) {
-      // #region agent log
-      const err = e as any;
-      console.error('[DEBUG testKey-error]', {errorName:err.name,errorMessage:err.message,errorType:err.constructor?.name,timestamp:Date.now()});
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:testKey-error',message:'fetch error caught',data:{errorName:err.name,errorMessage:err.message,errorStack:err.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H5'})}).catch(()=>{});
-      // #endregion
-      alert('❌ 网络请求失败');
-    } finally {
-      setIsTestingKey(false);
-    }
-  };
-
   // 翻译处理
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
-    if (!apiKey) {
-      alert('请先设置 Gemini API Key');
-      return;
-    }
 
     setIsLoading(true);
     // 清空之前的结果
@@ -143,32 +77,14 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append('text', inputText);
-    
-    // #region agent log
-    console.log('[DEBUG translate-entry]', {API_BASE_URL,textLength:inputText.length,apiKeyLength:apiKey.length,timestamp:Date.now()});
-    fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-entry',message:'handleTranslate started',data:{API_BASE_URL,textLength:inputText.length,apiKeyLength:apiKey.length},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H1,H4'})}).catch(()=>{});
-    // #endregion
 
     try {
-      const fullUrl = `${API_BASE_URL}/api/translate`;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-url',message:'constructed translate URL',data:{fullUrl,baseUrl:API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
-      const res = await fetch(fullUrl, {
+      const res = await fetch(`${API_BASE_URL}/api/translate`, {
         method: 'POST',
-        headers: {
-          'x-gemini-api-key': apiKey // 通过 Header 传递 Key
-        },
         body: formData,
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-response',message:'translate fetch response',data:{status:res.status,ok:res.ok,statusText:res.statusText,contentType:res.headers.get('content-type')},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H3,H4'})}).catch(()=>{});
-      // #endregion
 
       const data = await res.json();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-data',message:'parsed response data',data:{hasResult:!!data.result,hasError:!!data.error,resultLength:data.result?.length,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H3'})}).catch(()=>{});
-      // #endregion
 
       if (data.result) {
         // 解析结果
@@ -182,11 +98,6 @@ export default function Home() {
         alert(`翻译失败: ${data.error || '未知错误'} \n ${data.details || ''}`);
       }
     } catch (error) {
-      // #region agent log
-      const err = error as any;
-      console.error('[DEBUG translate-error]', {errorName:err.name,errorMessage:err.message,errorType:err.constructor?.name,timestamp:Date.now()});
-      fetch('http://127.0.0.1:7242/ingest/42c52926-0dc8-4bd3-9d27-34bcd5a3bcef',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:translate-error',message:'translate fetch error',data:{errorName:err.name,errorMessage:err.message,errorStack:err.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'H2,H4,H5'})}).catch(()=>{});
-      // #endregion
       console.error("请求错误:", error);
       alert("网络请求失败，请重试");
     } finally {
@@ -207,41 +118,11 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans text-gray-800">
       
-      {/* 顶部栏：API Key 设置 */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm flex-wrap gap-4">
+      {/* 顶部栏 */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm">
         <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <span className="text-blue-600 bg-blue-50 p-1 rounded">EN</span> Translator
         </h1>
-        
-        <div className="flex items-center gap-2 flex-1 max-w-2xl justify-end">
-          <div className="relative flex-1 max-w-md flex items-center">
-            <Settings size={16} className="absolute left-3 text-gray-400" />
-            <input 
-              type="password" 
-              placeholder="Enter Gemini API Key..."
-              value={apiKey}
-              onChange={(e) => { setApiKey(e.target.value); setIsKeySaved(false); }}
-              className={`w-full pl-9 pr-2 py-2 border rounded-l-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isKeySaved ? 'border-green-300 bg-green-50' : 'border-gray-300'}`}
-            />
-          </div>
-          <div className="flex -ml-2 rounded-r-lg overflow-hidden border border-l-0 border-gray-300">
-            <button 
-              onClick={saveKey}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 text-sm font-medium border-r border-gray-300 transition-colors flex items-center gap-1"
-              title="保存 API Key"
-            >
-              <Save size={16} /> 保存
-            </button>
-            <button 
-              onClick={testKey}
-              disabled={isTestingKey || !apiKey}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1 disabled:opacity-50"
-              title="测试 API Key"
-            >
-              {isTestingKey ? <Loader2 size={16} className="animate-spin" /> : <PlayCircle size={16} />} 测试
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* 主体内容：双栏布局 */}
@@ -264,7 +145,7 @@ export default function Home() {
           <div className="p-4 border-t border-gray-100 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
             <button
               onClick={handleTranslate}
-              disabled={isLoading || !inputText || !apiKey}
+              disabled={isLoading || !inputText}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 hover:translate-y-[-1px]"
             >
               {isLoading ? (
