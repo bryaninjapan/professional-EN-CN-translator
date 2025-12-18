@@ -61,6 +61,9 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     creditsDepletedMessage: '使用次数已用完，请购买新的激活码',
     pleaseActivate: '请输入激活码激活',
     creditsRemaining: '剩余次数',
+    tableHeaderOriginal: '英文原文',
+    tableHeaderTranslation: '翻译',
+    tableHeaderNote: '解释/备注',
     purchaseLicense: '购买激活码',
     purchaseDescription: '购买激活码可获得 100 次翻译使用次数',
     goToGumroad: '前往 Gumroad 购买',
@@ -119,6 +122,9 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     creditsDepletedMessage: '使用回数が終了しました。新しいライセンスキーを購入してください',
     pleaseActivate: 'ライセンスキーを入力して認証してください',
     creditsRemaining: '残り回数',
+    tableHeaderOriginal: '英文原文',
+    tableHeaderTranslation: '翻訳',
+    tableHeaderNote: '説明/備考',
     purchaseLicense: 'アクティベーションコードを購入',
     purchaseDescription: 'アクティベーションコードを購入すると、100回の翻訳使用回数を獲得できます',
     goToGumroad: 'Gumroadで購入する',
@@ -177,6 +183,9 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     creditsDepletedMessage: '사용 횟수가 소진되었습니다. 새로운 라이선스 키를 구매하세요',
     pleaseActivate: '라이선스 키를 입력하여 활성화하세요',
     creditsRemaining: '남은 횟수',
+    tableHeaderOriginal: '영문 원문',
+    tableHeaderTranslation: '번역',
+    tableHeaderNote: '설명/비고',
     purchaseLicense: '활성화 코드 구매',
     purchaseDescription: '활성화 코드를 구매하면 100회의 번역 사용 횟수를 획득할 수 있습니다',
     goToGumroad: 'Gumroad에서 구매하기',
@@ -235,6 +244,9 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     creditsDepletedMessage: 'Số lần sử dụng đã hết, vui lòng mua mã kích hoạt mới',
     pleaseActivate: 'Vui lòng nhập mã kích hoạt để kích hoạt',
     creditsRemaining: 'Số lần còn lại',
+    tableHeaderOriginal: 'Văn bản gốc tiếng Anh',
+    tableHeaderTranslation: 'Bản dịch',
+    tableHeaderNote: 'Giải thích/Ghi chú',
     purchaseLicense: 'Mua mã kích hoạt',
     purchaseDescription: 'Mua mã kích hoạt để nhận 100 lần sử dụng dịch',
     goToGumroad: 'Đến Gumroad để mua',
@@ -284,9 +296,44 @@ function getDeviceId(): string {
   return deviceId;
 }
 
+// 工具函数：替换表格表头
+const replaceTableHeaders = (text: string, uiLang: string, targetLang: string): string => {
+  const t = UI_TEXT[uiLang] || UI_TEXT['zh'];
+  const langNames: Record<string, string> = {
+    zh: '中文',
+    ja: '日本語',
+    ko: '한국어',
+    vi: 'Tiếng Việt',
+  };
+  const targetLangName = langNames[targetLang] || '中文';
+  
+  let result = text;
+  
+  // 匹配表格表头行，替换为当前UI语言
+  // 匹配格式：| 英文原文 | 目标语言翻译 | 解释/备注 |
+  // 需要匹配各种可能的表头格式，包括中文、日文、韩文、越南语
+  
+  // 匹配第一列：英文原文
+  result = result.replace(/\|\s*英文原文\s*\|/g, `| ${t.tableHeaderOriginal} |`);
+  
+  // 匹配第二列：目标语言翻译（可能包含语言名称，如"越南语翻译"、"日本語翻译"等）
+  const langPatterns = ['中文', '日本語', '한국어', 'Tiếng Việt', '越南语', '日语', '韩语'];
+  langPatterns.forEach(lang => {
+    result = result.replace(new RegExp(`\\|\\s*${lang}\\s*翻译\\s*\\|`, 'g'), `| ${targetLangName}${t.tableHeaderTranslation} |`);
+  });
+  // 也匹配没有语言名称的"翻译"
+  result = result.replace(/\|\s*翻译\s*\|/g, `| ${targetLangName}${t.tableHeaderTranslation} |`);
+  
+  // 匹配第三列：解释/备注
+  result = result.replace(/\|\s*解释\s*\/\s*备注\s*\|/g, `| ${t.tableHeaderNote} |`);
+  result = result.replace(/\|\s*解释\/备注\s*\|/g, `| ${t.tableHeaderNote} |`);
+  
+  return result;
+};
+
 // 工具函数：下载文件
-const downloadMarkdown = (sections: TranslationSections, sourceText: string, targetLang: string) => {
-  const t = UI_TEXT[targetLang] || UI_TEXT['zh'];
+const downloadMarkdown = (sections: TranslationSections, sourceText: string, uiLang: string) => {
+  const t = UI_TEXT[uiLang] || UI_TEXT['zh'];
   const content = `# ${t.resultTitle}
 
 ## ${t.sourceText}
@@ -322,7 +369,8 @@ ${sections.analysis}
 export default function Home() {
   // 状态管理
   const [inputText, setInputText] = useState('');
-  const [targetLang, setTargetLang] = useState('zh');
+  const [targetLang, setTargetLang] = useState('zh'); // 翻译目标语言
+  const [uiLang, setUiLang] = useState('zh'); // UI界面语言
   const [isLoading, setIsLoading] = useState(false);
   const [deviceId, setDeviceId] = useState('');
   const [remainingCount, setRemainingCount] = useState<number | null>(null);
@@ -349,8 +397,8 @@ export default function Home() {
   // 复制状态
   const [copyStatus, setCopyStatus] = useState<{[key: string]: boolean}>({});
 
-  // 获取当前语言的UI文本
-  const t = UI_TEXT[targetLang] || UI_TEXT['zh'];
+  // 获取UI文本（使用UI语言）
+  const t = UI_TEXT[uiLang] || UI_TEXT['zh'];
 
   // 初始化设备ID和检查使用次数
   useEffect(() => {
@@ -573,9 +621,13 @@ export default function Home() {
       if (data.result) {
         // 解析结果
         const parts = data.result.split('---SECTION_SEPARATOR---');
+        // 替换术语表中的表格表头为当前UI语言
+        const termsWithReplacedHeaders = parts[1]?.trim() 
+          ? replaceTableHeaders(parts[1].trim(), uiLang, targetLang)
+          : t.none;
         setSections({
           translation: parts[0]?.trim() || t.noContent,
-          terms: parts[1]?.trim() || t.none,
+          terms: termsWithReplacedHeaders,
           analysis: parts[2]?.trim() || t.none
         });
       } else {
@@ -691,9 +743,26 @@ export default function Home() {
             <span>{t.inviteFriend}</span>
           </button>
 
-          {/* 翻译目标语言选择器 */}
+          {/* UI界面语言选择器 */}
           <div className="flex items-center gap-2">
             <Languages size={18} className="text-gray-500" />
+            <select
+              value={uiLang}
+              onChange={(e) => setUiLang(e.target.value)}
+              className="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none cursor-pointer hover:bg-gray-100 transition-colors"
+              disabled={isLoading}
+            >
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 翻译目标语言选择器 */}
+          <div className="flex items-center gap-2">
+            <ArrowRightLeft size={18} className="text-gray-500" />
             <select
               value={targetLang}
               onChange={(e) => setTargetLang(e.target.value)}
@@ -758,7 +827,7 @@ export default function Home() {
             </span>
             {sections.translation && (
               <button 
-                onClick={() => downloadMarkdown(sections, inputText, targetLang)}
+                onClick={() => downloadMarkdown(sections, inputText, uiLang)}
                 className="flex items-center gap-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-md transition-colors shadow-sm"
               >
                 <Download size={14} />
