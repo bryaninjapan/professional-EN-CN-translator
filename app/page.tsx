@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2, ArrowRightLeft, Copy, Check, Download } from 'lucide-react';
+import { Loader2, ArrowRightLeft, Copy, Check, Download, Languages } from 'lucide-react';
+
+// 支持的语言配置
+const SUPPORTED_LANGUAGES = [
+  { code: 'zh', name: '简体中文' },
+  { code: 'ja', name: '日本語' },
+  { code: 'ko', name: '한국어' },
+];
 
 // API 基础 URL 配置（用于 GitHub Pages 静态部署时指向外部 API）
 // GitHub Pages 部署时会自动使用 Vercel API
@@ -56,6 +63,7 @@ ${sections.analysis}
 export default function Home() {
   // 状态管理
   const [inputText, setInputText] = useState('');
+  const [targetLang, setTargetLang] = useState('zh');
   const [isLoading, setIsLoading] = useState(false);
   
   const [sections, setSections] = useState<TranslationSections>({
@@ -77,6 +85,7 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append('text', inputText);
+    formData.append('targetLang', targetLang);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/translate`, {
@@ -123,6 +132,23 @@ export default function Home() {
         <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <span className="text-blue-600 bg-blue-50 p-1 rounded">EN</span> Translator
         </h1>
+
+        {/* 语言选择器 */}
+        <div className="flex items-center gap-2">
+          <Languages size={18} className="text-gray-500" />
+          <select
+            value={targetLang}
+            onChange={(e) => setTargetLang(e.target.value)}
+            className="bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none cursor-pointer hover:bg-gray-100 transition-colors"
+            disabled={isLoading}
+          >
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* 主体内容：双栏布局 */}
