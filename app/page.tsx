@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2, ArrowRightLeft, Copy, Check, Download, Languages, Key, Users, Gift, ShoppingCart } from 'lucide-react';
+import { Loader2, ArrowRightLeft, Copy, Check, Download, Languages, Key, Users, Gift, ShoppingCart, HelpCircle } from 'lucide-react';
 
 // 支持的语言配置（UI界面语言）
 const SUPPORTED_LANGUAGES = [
@@ -82,6 +82,22 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     unknownError: '未知错误',
     generateInviteCodeFailed: '生成邀请码失败',
     textTooLong: '文本过长，请分段翻译（最大50000字符）',
+    userGuide: '使用说明',
+    userGuideTitle: '📖 使用说明',
+    guideStep1: '1. 输入英文文本',
+    guideStep1Desc: '在文本框中粘贴或输入需要翻译的英文文本',
+    guideStep2: '2. 选择翻译目标语言',
+    guideStep2Desc: '选择您希望翻译成的目标语言（中文、日文、韩文或越南语）',
+    guideStep3: '3. 开始翻译',
+    guideStep3Desc: '点击"开始全流程翻译"按钮，系统将为您提供：\n- 完整翻译\n- 专业术语表\n- 难点与语境解析',
+    guideStep4: '4. 使用次数',
+    guideStep4Desc: '新用户首次使用可获得 3 次免费翻译次数\n- 使用激活码可获得更多次数\n- 邀请朋友使用邀请码，双方各获得 3 次',
+    guideStep5: '5. 导出结果',
+    guideStep5Desc: '翻译完成后，可以复制各部分内容或下载完整的 Markdown 文件',
+    guideTips: '💡 提示',
+    guideTip1: '• 支持长文本翻译，建议单次不超过 50000 字符',
+    guideTip2: '• 翻译结果包含专业术语表和语境解析，帮助您更好理解原文',
+    guideTip3: '• 可以多次激活激活码，次数会累加',
   },
   ja: {
     sourceText: '📄 原文 (English)',
@@ -143,6 +159,22 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     unknownError: '不明なエラー',
     generateInviteCodeFailed: '招待コードの生成に失敗しました',
     textTooLong: 'テキストが長すぎます。分割して翻訳してください（最大50000文字）',
+    userGuide: '使用説明',
+    userGuideTitle: '📖 使用説明',
+    guideStep1: '1. 英文テキストを入力',
+    guideStep1Desc: 'テキストボックスに翻訳したい英文を貼り付けるか入力してください',
+    guideStep2: '2. 翻訳対象言語を選択',
+    guideStep2Desc: '翻訳したい対象言語を選択してください（中国語、日本語、韓国語、ベトナム語）',
+    guideStep3: '3. 翻訳を開始',
+    guideStep3Desc: '「全プロセス翻訳を開始」ボタンをクリックすると、以下が提供されます：\n- 完全な翻訳\n- 専門用語表\n- 難点と文脈解析',
+    guideStep4: '4. 使用回数',
+    guideStep4Desc: '新規ユーザーは初回使用時に3回の無料翻訳回数を獲得できます\n- アクティベーションコードを使用すると、さらに回数を獲得できます\n- 友達に招待コードを共有すると、双方が3回獲得できます',
+    guideStep5: '5. 結果をエクスポート',
+    guideStep5Desc: '翻訳完了後、各部分の内容をコピーするか、完全なMarkdownファイルをダウンロードできます',
+    guideTips: '💡 ヒント',
+    guideTip1: '• 長文の翻訳をサポートしていますが、1回あたり50000文字以下を推奨します',
+    guideTip2: '• 翻訳結果には専門用語表と文脈解析が含まれており、原文をより良く理解するのに役立ちます',
+    guideTip3: '• アクティベーションコードを複数回アクティベートすると、回数が累積されます',
   },
   ko: {
     sourceText: '📄 원문 (English)',
@@ -204,6 +236,22 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     unknownError: '알 수 없는 오류',
     generateInviteCodeFailed: '초대 코드 생성 실패',
     textTooLong: '텍스트가 너무 깁니다. 분할하여 번역하세요 (최대 50000자)',
+    userGuide: '사용 설명',
+    userGuideTitle: '📖 사용 설명',
+    guideStep1: '1. 영어 텍스트 입력',
+    guideStep1Desc: '텍스트 상자에 번역할 영어 텍스트를 붙여넣거나 입력하세요',
+    guideStep2: '2. 번역 대상 언어 선택',
+    guideStep2Desc: '번역하고 싶은 대상 언어를 선택하세요 (중국어, 일본어, 한국어, 베트남어)',
+    guideStep3: '3. 번역 시작',
+    guideStep3Desc: '「전체 프로세스 번역 시작」버튼을 클릭하면 다음이 제공됩니다：\n- 완전한 번역\n- 전문 용어표\n- 난점 및 맥락 분석',
+    guideStep4: '4. 사용 횟수',
+    guideStep4Desc: '신규 사용자는 첫 사용 시 3회의 무료 번역 횟수를 획득할 수 있습니다\n- 활성화 코드를 사용하면 더 많은 횟수를 획득할 수 있습니다\n- 친구에게 초대 코드를 공유하면 양쪽 모두 3회를 획득합니다',
+    guideStep5: '5. 결과 내보내기',
+    guideStep5Desc: '번역 완료 후, 각 부분의 내용을 복사하거나 완전한 Markdown 파일을 다운로드할 수 있습니다',
+    guideTips: '💡 팁',
+    guideTip1: '• 긴 텍스트 번역을 지원하지만, 1회당 50000자 이하를 권장합니다',
+    guideTip2: '• 번역 결과에는 전문 용어표와 맥락 분석이 포함되어 있어 원문을 더 잘 이해하는 데 도움이 됩니다',
+    guideTip3: '• 활성화 코드를 여러 번 활성화하면 횟수가 누적됩니다',
   },
   vi: {
     sourceText: '📄 Văn bản gốc (English)',
@@ -265,6 +313,22 @@ const UI_TEXT: Record<string, Record<string, string>> = {
     unknownError: 'Lỗi không xác định',
     generateInviteCodeFailed: 'Tạo mã mời thất bại',
     textTooLong: 'Văn bản quá dài, vui lòng dịch từng phần (tối đa 50000 ký tự)',
+    userGuide: 'Hướng dẫn sử dụng',
+    userGuideTitle: '📖 Hướng dẫn sử dụng',
+    guideStep1: '1. Nhập văn bản tiếng Anh',
+    guideStep1Desc: 'Dán hoặc nhập văn bản tiếng Anh cần dịch vào hộp văn bản',
+    guideStep2: '2. Chọn ngôn ngữ đích',
+    guideStep2Desc: 'Chọn ngôn ngữ bạn muốn dịch sang (Tiếng Trung, Tiếng Nhật, Tiếng Hàn hoặc Tiếng Việt)',
+    guideStep3: '3. Bắt đầu dịch',
+    guideStep3Desc: 'Nhấp vào nút "Bắt đầu dịch toàn bộ quy trình", hệ thống sẽ cung cấp：\n- Bản dịch hoàn chỉnh\n- Bảng thuật ngữ chuyên ngành\n- Phân tích điểm khó và ngữ cảnh',
+    guideStep4: '4. Số lần sử dụng',
+    guideStep4Desc: 'Người dùng mới sẽ nhận được 3 lần dịch miễn phí khi sử dụng lần đầu\n- Sử dụng mã kích hoạt để nhận thêm số lần\n- Chia sẻ mã mời cho bạn bè, cả hai bên sẽ nhận được 3 lần',
+    guideStep5: '5. Xuất kết quả',
+    guideStep5Desc: 'Sau khi dịch xong, bạn có thể sao chép nội dung từng phần hoặc tải xuống file Markdown đầy đủ',
+    guideTips: '💡 Mẹo',
+    guideTip1: '• Hỗ trợ dịch văn bản dài, khuyến nghị không quá 50000 ký tự mỗi lần',
+    guideTip2: '• Kết quả dịch bao gồm bảng thuật ngữ và phân tích ngữ cảnh, giúp bạn hiểu rõ hơn về văn bản gốc',
+    guideTip3: '• Có thể kích hoạt mã kích hoạt nhiều lần, số lần sẽ được tích lũy',
   },
 };
 
@@ -381,6 +445,7 @@ export default function Home() {
   const [activateCodeInput, setActivateCodeInput] = useState('');
   const [isActivating, setIsActivating] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -749,6 +814,17 @@ export default function Home() {
         </h1>
 
         <div className="flex items-center gap-3 flex-wrap">
+          {/* 使用说明按钮 */}
+          <button
+            onClick={() => setShowGuideModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm rounded-lg transition-colors"
+            disabled={isLoading}
+            title={t.userGuide}
+          >
+            <HelpCircle size={16} />
+            <span>{t.userGuide}</span>
+          </button>
+
           {/* 使用次数显示 */}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
             <span className="text-xs font-medium text-blue-700">{t.remainingCount}:</span>
@@ -977,6 +1053,78 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* 使用说明模态框 */}
+      {showGuideModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 my-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+              <HelpCircle size={24} className="text-blue-600" />
+              {t.userGuideTitle}
+            </h2>
+            
+            <div className="space-y-6">
+              {/* 步骤 1 */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-blue-800 mb-2">{t.guideStep1}</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{t.guideStep1Desc}</p>
+              </div>
+
+              {/* 步骤 2 */}
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-2">{t.guideStep2}</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{t.guideStep2Desc}</p>
+              </div>
+
+              {/* 步骤 3 */}
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <h3 className="font-semibold text-purple-800 mb-2">{t.guideStep3}</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{t.guideStep3Desc}</p>
+              </div>
+
+              {/* 步骤 4 */}
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h3 className="font-semibold text-yellow-800 mb-2">{t.guideStep4}</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{t.guideStep4Desc}</p>
+              </div>
+
+              {/* 步骤 5 */}
+              <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                <h3 className="font-semibold text-indigo-800 mb-2">{t.guideStep5}</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{t.guideStep5Desc}</p>
+              </div>
+
+              {/* 提示 */}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h3 className="font-semibold text-gray-800 mb-3">{t.guideTips}</h3>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-1">•</span>
+                    <span>{t.guideTip1}</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-1">•</span>
+                    <span>{t.guideTip2}</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 mt-1">•</span>
+                    <span>{t.guideTip3}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                {t.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 购买激活码模态框 */}
       {showPurchaseModal && (
