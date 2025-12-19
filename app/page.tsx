@@ -1056,8 +1056,8 @@ export default function Home() {
 
       {/* 使用说明模态框 */}
       {showGuideModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 my-8">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 my-4 mt-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
               <HelpCircle size={24} className="text-blue-600" />
               {t.userGuideTitle}
