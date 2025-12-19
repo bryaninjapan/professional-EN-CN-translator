@@ -79,3 +79,51 @@ export function generateUUID(): string {
     return v.toString(16);
   });
 }
+
+// 生成设备指纹（用于防刷机制）
+export async function generateDeviceFingerprint(req: Request, deviceId: string): Promise<string> {
+  const userAgent = req.headers.get('user-agent') || '';
+  const ip = getClientIP(req);
+  const acceptLanguage = req.headers.get('accept-language') || '';
+  const acceptEncoding = req.headers.get('accept-encoding') || '';
+  
+  // 组合多个因素生成指纹
+  const fingerprintString = `${deviceId}|${userAgent}|${ip}|${acceptLanguage}|${acceptEncoding}`;
+  
+  // 使用 Web Crypto API 生成哈希
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(fingerprintString);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      // 如果 Web Crypto API 不可用，使用简单哈希
+      return simpleHash(fingerprintString);
+    }
+  }
+  
+  return simpleHash(fingerprintString);
+}
+
+// 简单哈希函数（备用方案）
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 转换为32位整数
+  }
+  return Math.abs(hash).toString(16);
+}
+
+// 获取请求的设备信息
+export function getDeviceInfo(req: Request) {
+  return {
+    ip: getClientIP(req),
+    userAgent: req.headers.get('user-agent') || '',
+    acceptLanguage: req.headers.get('accept-language') || '',
+    acceptEncoding: req.headers.get('accept-encoding') || '',
+  };
+}

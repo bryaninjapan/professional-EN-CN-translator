@@ -16,7 +16,7 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   try {
-    const { deviceId, textLength } = await req.json();
+    const { deviceId, textLength, clientCount } = await req.json();
 
     if (!deviceId || textLength === undefined) {
       return NextResponse.json(
@@ -28,6 +28,31 @@ export async function POST(req: Request) {
     const { env } = getRequestContext();
     const db = env.DB;
     const ip = getClientIP(req);
+    const now = Math.floor(Date.now() / 1000);
+
+    // 混合存储策略：验证客户端缓存
+    if (clientCount !== undefined) {
+      // 获取服务端真实次数
+      const serverCheck = await db
+        .prepare('SELECT total_credits FROM user_credits WHERE device_id = ?')
+        .bind(deviceId)
+        .first() as any;
+
+      const serverCount = serverCheck?.total_credits;
+      
+      // 如果客户端和服务端差异过大（超过1次），拒绝请求并要求同步
+      if (serverCount !== undefined && Math.abs(clientCount - serverCount) > 1) {
+        return NextResponse.json(
+          { 
+            error: '客户端缓存与服务端不一致，请刷新页面',
+            needsSync: true,
+            serverCount: serverCount,
+            clientCount: clientCount,
+          },
+          { status: 409, headers: corsHeaders }
+        );
+      }
+    }
 
     // 先检查免费次数
     const freeUsage = await db
@@ -42,8 +67,13 @@ export async function POST(req: Request) {
       // 首次使用，创建记录
       await db.prepare(
         'INSERT INTO device_free_usage (device_id, remaining_count, created_at, updated_at) VALUES (?, ?, ?, ?)'
-      ).bind(deviceId, 3, Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000)).run();
+      ).bind(deviceId, 3, now, now).run();
       freeCount = 3;
+      
+      // 同时创建 user_credits 记录
+      await db.prepare(
+        'INSERT INTO user_credits (device_id, free_credits, total_credits, last_verified_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(deviceId, 3, 3, now, now, now).run();
     }
 
     let usedFrom = 'free';
@@ -55,8 +85,21 @@ export async function POST(req: Request) {
       const newCount = freeCount - 1;
       await db.prepare(
         'UPDATE device_free_usage SET remaining_count = ?, updated_at = ? WHERE device_id = ?'
-      ).bind(newCount, Math.floor(Date.now() / 1000), deviceId).run();
+      ).bind(newCount, now, deviceId).run();
       remainingCount = newCount;
+      
+      // 更新 user_credits 缓存
+      const userCredits = await db
+        .prepare('SELECT * FROM user_credits WHERE device_id = ?')
+        .bind(deviceId)
+        .first() as any;
+      
+      if (userCredits) {
+        const newTotalCredits = newCount + (userCredits.activation_credits || 0);
+        await db.prepare(
+          'UPDATE user_credits SET free_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
+        ).bind(newCount, newTotalCredits, now, now, deviceId).run();
+      }
     } else {
       // 查找有剩余次数的激活码
       const activationUsages = await db
@@ -71,11 +114,25 @@ export async function POST(req: Request) {
         
         await db.prepare(
           'UPDATE device_activation_usage SET remaining_count = ?, updated_at = ? WHERE device_id = ? AND activation_code = ?'
-        ).bind(newCount, Math.floor(Date.now() / 1000), deviceId, actCode).run();
+        ).bind(newCount, now, deviceId, actCode).run();
         
         remainingCount = newCount;
         usedFrom = 'activation';
         usedActivationCode = actCode;
+        
+        // 更新 user_credits 缓存
+        const userCredits = await db
+          .prepare('SELECT * FROM user_credits WHERE device_id = ?')
+          .bind(deviceId)
+          .first() as any;
+        
+        if (userCredits) {
+          const newActivationCredits = (userCredits.activation_credits || 0) - 1;
+          const newTotalCredits = (userCredits.free_credits || 0) + newActivationCredits;
+          await db.prepare(
+            'UPDATE user_credits SET activation_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
+          ).bind(newActivationCredits, newTotalCredits, now, now, deviceId).run();
+        }
       } else {
         return NextResponse.json(
           { error: '使用次数不足，请激活激活码或使用邀请码' },
@@ -84,12 +141,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // 记录使用
+    // 记录使用（防止篡改）
     await db.prepare(
       'INSERT INTO usage_records (device_id, activation_code, ip_address, text_length, used_at) VALUES (?, ?, ?, ?, ?)'
-    ).bind(deviceId, usedActivationCode || null, ip, textLength, Math.floor(Date.now() / 1000)).run();
+    ).bind(deviceId, usedActivationCode || null, ip, textLength, now).run();
 
-    // 重新获取免费次数（可能已更新）
+    // 重新计算总次数（从源表计算，确保准确性）
     const updatedFreeUsage = await db
       .prepare('SELECT remaining_count FROM device_free_usage WHERE device_id = ?')
       .bind(deviceId)
@@ -111,6 +168,11 @@ export async function POST(req: Request) {
     }
 
     const totalRemaining = updatedFreeCount + totalActivationCount;
+    
+    // 确保 user_credits 缓存同步
+    await db.prepare(
+      'UPDATE user_credits SET free_credits = ?, activation_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
+    ).bind(updatedFreeCount, totalActivationCount, totalRemaining, now, now, deviceId).run();
 
     return NextResponse.json({
       success: true,

@@ -416,30 +416,58 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // 检查使用次数
+  // 检查使用次数（混合存储策略：客户端缓存 + 服务端验证）
   const checkUsageCount = async (deviceIdToCheck?: string) => {
     const id = deviceIdToCheck || deviceId;
     if (!id) return;
 
     setIsCheckingCount(true);
     try {
+      // 从 localStorage 获取客户端缓存
+      const clientCount = localStorage.getItem('usage_count') 
+        ? parseInt(localStorage.getItem('usage_count') || '0', 10) 
+        : undefined;
+
       const res = await fetch(`${API_BASE_URL}/api/usage/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId: id }),
+        body: JSON.stringify({ 
+          deviceId: id,
+          clientCount: clientCount, // 发送客户端缓存用于验证
+        }),
       });
       const data = await res.json();
       if (data.success) {
+        // 更新状态
         setRemainingCount(data.totalCount);
+        
+        // 更新 localStorage 缓存（混合存储策略）
+        localStorage.setItem('usage_count', data.totalCount.toString());
+        localStorage.setItem('usage_count_timestamp', Date.now().toString());
+        
+        // 如果客户端缓存无效，显示提示（可选）
+        if (data.needsSync && clientCount !== undefined) {
+          console.warn('客户端缓存与服务端不一致，已同步');
+        }
       } else {
         // 如果检查失败，可能是首次使用，设置为0让用户知道需要激活
         if (data.error?.includes('设备ID')) {
           setRemainingCount(0);
+          localStorage.setItem('usage_count', '0');
         }
       }
     } catch (error) {
       console.error('检查使用次数失败:', error);
-      // 网络错误时不更新，保持当前值
+      // 网络错误时，尝试使用 localStorage 缓存
+      const cachedCount = localStorage.getItem('usage_count');
+      if (cachedCount) {
+        const count = parseInt(cachedCount, 10);
+        const timestamp = parseInt(localStorage.getItem('usage_count_timestamp') || '0', 10);
+        // 如果缓存时间在5分钟内，使用缓存
+        if (Date.now() - timestamp < 5 * 60 * 1000) {
+          setRemainingCount(count);
+        }
+      }
     } finally {
       setIsCheckingCount(false);
     }
@@ -469,9 +497,15 @@ export default function Home() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`${t.activateCodeSuccess}！${t.receivedCredits.replace('{count}', data.remainingCount.toString())}`);
+        alert(`${t.activateCodeSuccess}！${t.receivedCredits.replace('{count}', data.creditsAdded?.toString() || data.remainingCount.toString())}`);
         setActivateCodeInput('');
         setShowActivateModal(false);
+        // 更新本地缓存
+        if (data.totalRemainingCount !== undefined) {
+          setRemainingCount(data.totalRemainingCount);
+          localStorage.setItem('usage_count', data.totalRemainingCount.toString());
+          localStorage.setItem('usage_count_timestamp', Date.now().toString());
+        }
         await checkUsageCount();
       } else {
         alert(data.error || t.activateFailed);
@@ -537,6 +571,7 @@ export default function Home() {
       if (data.success) {
         alert(`${t.inviteCodeSuccess}！${t.inviteCodeReward.replace('{count}', data.rewardCount.toString())}`);
         setInviteCodeInput('');
+        // 更新本地缓存（邀请码会增加免费次数）
         await checkUsageCount();
       } else {
         alert(data.error || t.useInviteCodeFailed);
@@ -584,25 +619,42 @@ export default function Home() {
 
     try {
       // 先消耗使用次数
+      // 获取客户端缓存用于验证
+      const clientCount = localStorage.getItem('usage_count') 
+        ? parseInt(localStorage.getItem('usage_count') || '0', 10) 
+        : undefined;
+
       const consumeRes = await fetch(`${API_BASE_URL}/api/usage/consume`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           deviceId, 
-          textLength: inputText.length
+          textLength: inputText.length,
+          clientCount: clientCount, // 发送客户端缓存用于验证
         }),
       });
 
       consumeData = await consumeRes.json();
       if (!consumeData.success) {
-        alert(consumeData.error || t.noRemainingCount);
+        // 如果是缓存不一致错误，同步服务端数据
+        if (consumeData.needsSync) {
+          setRemainingCount(consumeData.serverCount);
+          localStorage.setItem('usage_count', consumeData.serverCount.toString());
+          localStorage.setItem('usage_count_timestamp', Date.now().toString());
+          alert('数据已同步，请重试');
+        } else {
+          alert(consumeData.error || t.noRemainingCount);
+        }
         setIsLoading(false);
         await checkUsageCount();
         return;
       }
 
-      // 更新剩余次数
+      // 更新剩余次数（混合存储策略）
       setRemainingCount(consumeData.remainingCount);
+      localStorage.setItem('usage_count', consumeData.remainingCount.toString());
+      localStorage.setItem('usage_count_timestamp', Date.now().toString());
+      
       usedFrom = consumeData.usedFrom;
       usedActivationCode = consumeData.usedActivationCode;
 

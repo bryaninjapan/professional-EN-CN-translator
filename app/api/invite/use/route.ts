@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getRequestContext } from '@cloudflare/next-on-pages';
-import { getClientIP } from '@/lib/db';
+import { getClientIP, generateDeviceFingerprint, getDeviceInfo } from '@/lib/db';
 
 export const runtime = 'edge';
 
@@ -30,6 +30,10 @@ export async function POST(req: Request) {
     const { env } = getRequestContext();
     const db = env.DB;
     const ip = getClientIP(req);
+    const deviceInfo = getDeviceInfo(req);
+
+    // 生成设备指纹
+    const fingerprint = await generateDeviceFingerprint(req, deviceId);
 
     // 查询邀请码
     const inviteCode = await db
@@ -44,7 +48,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 防止自己使用自己的邀请码
+    // 防止自己使用自己的邀请码（自邀请检测）
     if (inviteCode.creator_device_id === deviceId) {
       return NextResponse.json(
         { error: '不能使用自己创建的邀请码' },
@@ -52,7 +56,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 检查是否已经使用过这个邀请码
+    // 设备指纹验证：检查是否有相同指纹的设备使用过此邀请码
+    const fingerprintCheck = await db
+      .prepare('SELECT * FROM device_invite_usage WHERE invite_code = ? AND device_fingerprint = ?')
+      .bind(code, fingerprint)
+      .first() as any;
+
+    if (fingerprintCheck) {
+      return NextResponse.json(
+        { error: '检测到相同设备指纹，无法重复使用邀请码' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // 检查是否已经使用过这个邀请码（设备ID检查）
     const existingUsage = await db
       .prepare('SELECT * FROM device_invite_usage WHERE device_id = ? AND invite_code = ?')
       .bind(deviceId, code)
@@ -65,10 +82,31 @@ export async function POST(req: Request) {
       );
     }
 
-    // 记录使用
+    // 检查邀请码是否已被使用（唯一性检查）
+    // 注意：这里我们允许一个邀请码被多个不同设备使用，但每个设备只能使用一次
+
+    const now = Math.floor(Date.now() / 1000);
+
+    // 记录使用（包含设备指纹和IP）
     await db.prepare(
-      'INSERT INTO device_invite_usage (device_id, invite_code, used_at) VALUES (?, ?, ?)'
-    ).bind(deviceId, code, Math.floor(Date.now() / 1000)).run();
+      'INSERT INTO device_invite_usage (device_id, invite_code, used_at, device_fingerprint, ip_address) VALUES (?, ?, ?, ?, ?)'
+    ).bind(deviceId, code, now, fingerprint, ip).run();
+
+    // 更新或创建设备指纹记录
+    const existingFingerprint = await db
+      .prepare('SELECT * FROM device_fingerprints WHERE device_id = ?')
+      .bind(deviceId)
+      .first() as any;
+
+    if (existingFingerprint) {
+      await db.prepare(
+        'UPDATE device_fingerprints SET fingerprint_hash = ?, user_agent = ?, ip_address = ?, last_seen_at = ? WHERE device_id = ?'
+      ).bind(fingerprint, deviceInfo.userAgent, ip, now, deviceId).run();
+    } else {
+      await db.prepare(
+        'INSERT INTO device_fingerprints (device_id, fingerprint_hash, user_agent, ip_address, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(deviceId, fingerprint, deviceInfo.userAgent, ip, now, now).run();
+    }
 
     // 更新邀请码使用次数
     await db.prepare(
@@ -84,11 +122,29 @@ export async function POST(req: Request) {
     if (freeUsage) {
       await db.prepare(
         'UPDATE device_free_usage SET remaining_count = remaining_count + ?, updated_at = ? WHERE device_id = ?'
-      ).bind(INVITE_REWARD_COUNT, Math.floor(Date.now() / 1000), deviceId).run();
+      ).bind(INVITE_REWARD_COUNT, now, deviceId).run();
     } else {
       await db.prepare(
         'INSERT INTO device_free_usage (device_id, remaining_count, created_at, updated_at) VALUES (?, ?, ?, ?)'
-      ).bind(deviceId, INVITE_REWARD_COUNT, Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000)).run();
+      ).bind(deviceId, INVITE_REWARD_COUNT, now, now).run();
+    }
+
+    // 更新被邀请者的 user_credits 缓存
+    const inviteeCredits = await db
+      .prepare('SELECT * FROM user_credits WHERE device_id = ?')
+      .bind(deviceId)
+      .first() as any;
+
+    if (inviteeCredits) {
+      const newFreeCredits = (inviteeCredits.free_credits || 0) + INVITE_REWARD_COUNT;
+      const newTotalCredits = newFreeCredits + (inviteeCredits.activation_credits || 0);
+      await db.prepare(
+        'UPDATE user_credits SET free_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
+      ).bind(newFreeCredits, newTotalCredits, now, now, deviceId).run();
+    } else {
+      await db.prepare(
+        'INSERT INTO user_credits (device_id, free_credits, total_credits, last_verified_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(deviceId, INVITE_REWARD_COUNT, INVITE_REWARD_COUNT, now, now, now).run();
     }
 
     // 给邀请者增加免费次数
@@ -100,11 +156,29 @@ export async function POST(req: Request) {
     if (creatorFreeUsage) {
       await db.prepare(
         'UPDATE device_free_usage SET remaining_count = remaining_count + ?, updated_at = ? WHERE device_id = ?'
-      ).bind(INVITE_REWARD_COUNT, Math.floor(Date.now() / 1000), inviteCode.creator_device_id).run();
+      ).bind(INVITE_REWARD_COUNT, now, inviteCode.creator_device_id).run();
     } else {
       await db.prepare(
         'INSERT INTO device_free_usage (device_id, remaining_count, created_at, updated_at) VALUES (?, ?, ?, ?)'
-      ).bind(inviteCode.creator_device_id, INVITE_REWARD_COUNT, Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000)).run();
+      ).bind(inviteCode.creator_device_id, INVITE_REWARD_COUNT, now, now).run();
+    }
+
+    // 更新邀请者的 user_credits 缓存
+    const creatorCredits = await db
+      .prepare('SELECT * FROM user_credits WHERE device_id = ?')
+      .bind(inviteCode.creator_device_id)
+      .first() as any;
+
+    if (creatorCredits) {
+      const newFreeCredits = (creatorCredits.free_credits || 0) + INVITE_REWARD_COUNT;
+      const newTotalCredits = newFreeCredits + (creatorCredits.activation_credits || 0);
+      await db.prepare(
+        'UPDATE user_credits SET free_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
+      ).bind(newFreeCredits, newTotalCredits, now, now, inviteCode.creator_device_id).run();
+    } else {
+      await db.prepare(
+        'INSERT INTO user_credits (device_id, free_credits, total_credits, last_verified_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(inviteCode.creator_device_id, INVITE_REWARD_COUNT, INVITE_REWARD_COUNT, now, now, now).run();
     }
 
     return NextResponse.json({
