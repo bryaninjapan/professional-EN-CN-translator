@@ -67,31 +67,52 @@ export async function POST(req: Request) {
         'UPDATE device_activation_usage SET remaining_count = ?, updated_at = ? WHERE device_id = ? AND activation_code = ?'
       ).bind(newCount, now, deviceId, code).run();
 
-      // 记录激活详情
-      await db.prepare(
-        'INSERT INTO activation_details (device_id, activation_code, credits_added, activated_at) VALUES (?, ?, ?, ?)'
-      ).bind(deviceId, code, activationCode.initial_count, now).run();
+      // 记录激活详情（如果表存在，忽略外键约束错误）
+      try {
+        await db.prepare(
+          'INSERT INTO activation_details (device_id, activation_code, credits_added, activated_at) VALUES (?, ?, ?, ?)'
+        ).bind(deviceId, code, activationCode.initial_count, now).run();
+      } catch (e: any) {
+        // 如果表不存在或外键约束失败，忽略错误（向后兼容）
+        const errorMsg = e?.message || String(e);
+        if (!errorMsg.includes('no such table') && !errorMsg.includes('FOREIGN KEY')) {
+          console.error('activation_details insert error:', e);
+        }
+      }
 
-      // 更新 user_credits 缓存
-      const userCredits = await db
-        .prepare('SELECT * FROM user_credits WHERE device_id = ?')
+      // 更新 user_credits 缓存（如果表存在）
+      let userCredits: any = null;
+      try {
+        userCredits = await db
+          .prepare('SELECT * FROM user_credits WHERE device_id = ?')
+          .bind(deviceId)
+          .first() as any;
+
+        if (userCredits) {
+          const newActivationCredits = (userCredits.activation_credits || 0) + activationCode.initial_count;
+          const newTotalCredits = (userCredits.free_credits || 0) + newActivationCredits;
+          await db.prepare(
+            'UPDATE user_credits SET activation_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
+          ).bind(newActivationCredits, newTotalCredits, now, now, deviceId).run();
+        }
+      } catch (e) {
+        // 如果表不存在，忽略错误（向后兼容）
+        console.warn('user_credits table may not exist:', e);
+      }
+
+      // 获取免费次数用于计算总数
+      const freeUsage = await db
+        .prepare('SELECT remaining_count FROM device_free_usage WHERE device_id = ?')
         .bind(deviceId)
         .first() as any;
-
-      if (userCredits) {
-        const newActivationCredits = (userCredits.activation_credits || 0) + activationCode.initial_count;
-        const newTotalCredits = (userCredits.free_credits || 0) + newActivationCredits;
-        await db.prepare(
-          'UPDATE user_credits SET activation_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
-        ).bind(newActivationCredits, newTotalCredits, now, now, deviceId).run();
-      }
+      const freeCount = freeUsage?.remaining_count || 0;
 
       return NextResponse.json({
         success: true,
         message: '激活码已叠加，次数已累加',
         creditsAdded: activationCode.initial_count,
         remainingCount: newCount,
-        totalRemainingCount: newCount + (userCredits?.free_credits || 0),
+        totalRemainingCount: newCount + freeCount,
         type: activationCode.type,
       }, { headers: corsHeaders });
     }
@@ -107,41 +128,62 @@ export async function POST(req: Request) {
       'INSERT INTO device_activation_usage (device_id, activation_code, remaining_count, updated_at) VALUES (?, ?, ?, ?)'
     ).bind(deviceId, code, activationCode.initial_count, now).run();
 
-    // 记录激活详情
-    await db.prepare(
-      'INSERT INTO activation_details (device_id, activation_code, credits_added, activated_at) VALUES (?, ?, ?, ?)'
-    ).bind(deviceId, code, activationCode.initial_count, now).run();
-
-    // 更新或创建 user_credits 缓存
-    const userCredits = await db
-      .prepare('SELECT * FROM user_credits WHERE device_id = ?')
-      .bind(deviceId)
-      .first() as any;
-
-    if (userCredits) {
-      const newActivationCredits = (userCredits.activation_credits || 0) + activationCode.initial_count;
-      const newTotalCredits = (userCredits.free_credits || 0) + newActivationCredits;
+    // 记录激活详情（如果表存在，忽略外键约束错误）
+    try {
       await db.prepare(
-        'UPDATE user_credits SET activation_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
-      ).bind(newActivationCredits, newTotalCredits, now, now, deviceId).run();
-    } else {
-      // 如果 user_credits 不存在，创建它
-      const freeUsage = await db
-        .prepare('SELECT remaining_count FROM device_free_usage WHERE device_id = ?')
+        'INSERT INTO activation_details (device_id, activation_code, credits_added, activated_at) VALUES (?, ?, ?, ?)'
+      ).bind(deviceId, code, activationCode.initial_count, now).run();
+    } catch (e: any) {
+      // 如果表不存在或外键约束失败，忽略错误（向后兼容）
+      const errorMsg = e?.message || String(e);
+      if (!errorMsg.includes('no such table') && !errorMsg.includes('FOREIGN KEY')) {
+        console.error('activation_details insert error:', e);
+      }
+    }
+
+    // 更新或创建 user_credits 缓存（如果表存在）
+    let userCredits: any = null;
+    try {
+      userCredits = await db
+        .prepare('SELECT * FROM user_credits WHERE device_id = ?')
         .bind(deviceId)
         .first() as any;
-      const freeCount = freeUsage?.remaining_count || 3;
-      await db.prepare(
-        'INSERT INTO user_credits (device_id, free_credits, activation_credits, total_credits, last_verified_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).bind(deviceId, freeCount, activationCode.initial_count, freeCount + activationCode.initial_count, now, now, now).run();
+
+      if (userCredits) {
+        const newActivationCredits = (userCredits.activation_credits || 0) + activationCode.initial_count;
+        const newTotalCredits = (userCredits.free_credits || 0) + newActivationCredits;
+        await db.prepare(
+          'UPDATE user_credits SET activation_credits = ?, total_credits = ?, last_verified_at = ?, updated_at = ? WHERE device_id = ?'
+        ).bind(newActivationCredits, newTotalCredits, now, now, deviceId).run();
+      } else {
+        // 如果 user_credits 不存在，创建它
+        const freeUsage = await db
+          .prepare('SELECT remaining_count FROM device_free_usage WHERE device_id = ?')
+          .bind(deviceId)
+          .first() as any;
+        const freeCount = freeUsage?.remaining_count || 3;
+        await db.prepare(
+          'INSERT INTO user_credits (device_id, free_credits, activation_credits, total_credits, last_verified_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(deviceId, freeCount, activationCode.initial_count, freeCount + activationCode.initial_count, now, now, now).run();
+      }
+    } catch (e) {
+      // 如果表不存在，忽略错误（向后兼容）
+      console.warn('user_credits table may not exist:', e);
     }
+
+    // 获取免费次数用于计算总数
+    const freeUsage = await db
+      .prepare('SELECT remaining_count FROM device_free_usage WHERE device_id = ?')
+      .bind(deviceId)
+      .first() as any;
+    const freeCount = freeUsage?.remaining_count || 0;
 
     return NextResponse.json({
       success: true,
       message: '激活成功',
       creditsAdded: activationCode.initial_count,
       remainingCount: activationCode.initial_count,
-      totalRemainingCount: activationCode.initial_count + (userCredits?.free_credits || 0),
+      totalRemainingCount: activationCode.initial_count + freeCount,
       type: activationCode.type,
       isNewActivation,
     }, { headers: corsHeaders });
